@@ -15,7 +15,7 @@ namespace bndts {
 		public:
 			Lexer(ITextProvider *textProvider);
 			~Lexer();
-			std::vector<Token> Parse(const std::string& raw);
+			std::vector<Token> Parse(const std::string& raw, const std::string& file);
 			std::vector<Token> Get(const std::string& raw);
             void Normalize(std::vector<Token>* tokens);
 		};
@@ -27,10 +27,9 @@ namespace bndts {
 			delete _textProvider;
 		}
 
-        std::vector<Token> Lexer::Parse(const std::string& raw) {
+        std::vector<Token> Lexer::Parse(const std::string& raw, const std::string& file = "NONE") {
             setlocale(LC_ALL, "rus");
-            std::string filename = "NONE";
-            filename = raw;
+            std::string filename = file;
             std::string txt = _textProvider->Get(raw);
             std::cout << txt;
             auto Join = [](const std::vector<std::string>& dict) {
@@ -58,7 +57,7 @@ namespace bndts {
             auto expr = std::vector<std::pair<std::string, std::string>>{
                 {"VALUE", R"(\d+\.\d*|\d+)"},
                 {"BRACKETS", R"(\(|\))"},
-                {"BLOCK", R"(Погнали|Шухер)"},
+                {"BLOCK", R"(Погнали\\s|Шухер\\s)"},
                 {"COMMENT", R"(\/\/.*|\/\*[\s\S]*?\*\/)"},
                 {"STRING", R"(\'(\\.|[^'\\])*\'|\"(\\.|[^"\\])*\")"},
                 {"KEYWORD", Join(keywords)},
@@ -79,12 +78,28 @@ namespace bndts {
             auto words_end = std::sregex_iterator();
 
             std::vector<Token> tokens = std::vector<Token>();
-
+            auto getCol = [](const std::string& str, int pos) {
+                int ctr = 0;
+                while (pos > 0 && str[pos - 1] != '\n' && str[pos - 1] != '\r') {
+                    --pos;
+                    ++ctr;
+                }
+                return ctr;
+            };
+            auto getStr = [](const std::string& str, int pos) {
+                int ctr = 0;
+                while (pos >= 0) {
+                    if (str[pos] == '\n')
+                        ++ctr;
+                    --pos;
+                }
+                return ctr;
+            };
             for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
                 std::smatch match = *i;
                 for (auto& it : expr) {
                     if (std::regex_match(match.str(), std::regex(it.second))) {
-                        tokens.push_back(Token{filename, it.first, match.str(), match.str(), match.position()});
+                        tokens.push_back(Token{filename, it.first, match.str(), match.str(), match.position(), getCol(txt, match.position()), getStr(txt, match.position())});
                         break;
                     }
                 }
@@ -103,52 +118,52 @@ namespace bndts {
 
         void Lexer::Normalize(std::vector<Token>* tokens) {
             auto replacesKeywords = std::vector<std::pair<std::string, std::string>>{
-                {"чётк..", "const"},
-                {"широк..", "array"},
-                {"оч", "dim"},
-                {"блатн..", "unsigned"},
-                {"посыльн..", "ptr"},
+                {"чётк\\S\\S\\s", "const"},
+                {"широк\\S\\S\\s", "array"},
+                {"оч\\s", "dim"},
+                {"блатн\\S\\S\\s", "unsigned"},
+                {"посыльн\\S\\S\\s", "ptr"},
 
-                {"лапша", "func"},
-                {"прогнать", "for"},
-                {"до", "to"},
-                {"шаг", "step"},
-                {"пока", "while"},
-                {"юмать", "do"},
-                {"пояснить", "out"},
-                {"за", "outfirst"},
-                {"и", "outelem"},
-                {"алё", "in"},
-                {"атас", "throw"},
-                {"харэ", "break"},
-                {"сачковать", "continue"},
-                {"липа", "null"},
-                {"стрела", "if"},
-                {"забить", "then"},
-                {"жиган", "true"},
-                {"фраер", "false"},
-                {"хапнуть", "new"},
-                {"вальнуть", "delete"},
-                {"ласкать", "return"},
-                {"малина", "struct"}
+                {"лапша\\s", "func"},
+                {"прогнать\\s", "for"},
+                {"до\\s", "to"},
+                {"шаг\\s", "step"},
+                {"пока\\s", "while"},
+                {"юмать\\s", "do"},
+                {"пояснить\\s", "out"},
+                {"за\\s", "outfirst"},
+                {"и\\s", "outelem"},
+                {"алё\\s", "in"},
+                {"атас\\s", "throw"},
+                {"харэ\\s", "break"},
+                {"сачковать\\s", "continue"},
+                {"липа\\s", "null"},
+                {"стрела\\s", "if"},
+                {"забить\\s", "then"},
+                {"жиган\\s", "true"},
+                {"фраер\\s", "false"},
+                {"хапнуть\\s", "new"},
+                {"вальнуть\\s", "delete"},
+                {"ласкать\\s", "return"},
+                {"малина\\s", "struct"}
             };
             auto replacesTypes = std::vector<std::pair<std::string, std::string>>{
-                {"погоняло", "string"},
-                {"шифер", "int"},
-                {"колонна", "long"},
-                {"плавник", "float"},
-                {"двойник", "double"},
-                {"гудрон", "char"},
-                {"чубрик", "bool"},
+                {"погоняло\\s", "string"},
+                {"шифер\\s", "int"},
+                {"колонна\\s", "long"},
+                {"плавник\\s", "float"},
+                {"двойник\\s", "double"},
+                {"гудрон\\s", "char"},
+                {"чубрик\\s", "bool"},
             };
             auto replacesOperations = std::vector<std::pair<std::string, std::string>>{
-                {"внатуре", "equal"},
-                {"по масти", "init"},
-                {"повесить", "="},
-                {"поболее", ">"},
-                {"поменее", "<"},
-                {"полевее", "<<"},
-                {"поправее", ">>"},
+                {"внатуре\\s", "equal"},
+                {"по масти\\s", "init"},
+                {"повесить\\s", "="},
+                {"поболее\\s", ">"},
+                {"поменее\\s", "<"},
+                {"полевее\\s", "<<"},
+                {"поправее\\s", ">>"},
             };
             for (int it = 0; it < tokens->size(); ++it) {
                 auto& elem = tokens->at(it);

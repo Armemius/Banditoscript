@@ -19,6 +19,9 @@
     <Filter Include="Файлы заголовков\Lexer\TextProviders">
       <UniqueIdentifier>{87676f4e-9039-435d-8a6f-2b9f33aa9aac}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Файлы заголовков\Syntaxer">
+      <UniqueIdentifier>{c656b996-ac59-407e-8c96-2fa63046ccf2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Program.cpp">
@@ -49,6 +52,9 @@
     </ClInclude>
     <ClInclude Include="Utility.h">
       <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="SyntacticTree.h">
+      <Filter>Файлы заголовков\Syntaxer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -11,6 +11,19 @@ int main(int argc, char* argv[]) {
 	lex::Lexer lexa(new lex::FileTextProvider());
 	
 	for (auto sus : lexa.Get(R"(D:\Le projects\Sussy\Thulan\Translator\Source.txt)")) {
-		std::cout << sus.filename << " " << sus.id << " " << sus.orig << " " << sus.value << " " << sus.pos << "\n\r";
+		std::cout << sus.filename 
+			<< " " 
+			<< sus.id 
+			<< " " 
+			<< sus.orig 
+			<< " " 
+			<< sus.value 
+			<< " " 
+			<< sus.pos 
+			<< " " 
+			<< sus.col 
+			<< " " 
+			<< sus.line 
+			<< "\n\r";
 	}
 }
