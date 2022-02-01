@@ -57,7 +57,7 @@ namespace bndts {
             auto expr = std::vector<std::pair<std::string, std::string>>{
                 {"VALUE", R"(\d+\.\d*|\d+)"},
                 {"BRACKETS", R"(\(|\))"},
-                {"BLOCK", R"(Погнали\\s|Шухер\\s)"},
+                {"BLOCK", R"(\bPognali\b|\bShuher\b)"},
                 {"COMMENT", R"(\/\/.*|\/\*[\s\S]*?\*\/)"},
                 {"STRING", R"(\'(\\.|[^'\\])*\'|\"(\\.|[^"\\])*\")"},
                 {"KEYWORD", Join(keywords)},
@@ -104,8 +104,10 @@ namespace bndts {
                     }
                 }
             }
-            if (std::regex_replace(txt, joinedRegex, "").size() > 0)
+            if (std::regex_replace(txt, joinedRegex, "").size() > 0) {
+                std::cout << std::regex_replace(txt, joinedRegex, "");
                 throw std::exception("Invalid tokens: unable to parse");
+            }
             else
                 return tokens;
         }
@@ -118,52 +120,52 @@ namespace bndts {
 
         void Lexer::Normalize(std::vector<Token>* tokens) {
             auto replacesKeywords = std::vector<std::pair<std::string, std::string>>{
-                {"чётк\\S\\S\\s", "const"},
-                {"широк\\S\\S\\s", "array"},
-                {"оч\\s", "dim"},
-                {"блатн\\S\\S\\s", "unsigned"},
-                {"посыльн\\S\\S\\s", "ptr"},
+                {"(chotkiy|chotkaya|chotkoe)", "const"},
+                {"(shirokiy|shirokaya|shirokoe)", "array"},
+                {"och", "dim"},
+                {"(blatnoy|blatnaya|blatnoe)", "unsigned"},
+                {"(posilniy|posilnaya|posilnoe)", "ptr"},
 
-                {"лапша\\s", "func"},
-                {"прогнать\\s", "for"},
-                {"до\\s", "to"},
-                {"шаг\\s", "step"},
-                {"пока\\s", "while"},
-                {"юмать\\s", "do"},
-                {"пояснить\\s", "out"},
-                {"за\\s", "outfirst"},
-                {"и\\s", "outelem"},
-                {"алё\\s", "in"},
-                {"атас\\s", "throw"},
-                {"харэ\\s", "break"},
-                {"сачковать\\s", "continue"},
-                {"липа\\s", "null"},
-                {"стрела\\s", "if"},
-                {"забить\\s", "then"},
-                {"жиган\\s", "true"},
-                {"фраер\\s", "false"},
-                {"хапнуть\\s", "new"},
-                {"вальнуть\\s", "delete"},
-                {"ласкать\\s", "return"},
-                {"малина\\s", "struct"}
+                {"lapsha", "func"},
+                {"prognat", "for"},
+                {"do", "to"},
+                {"shag", "step"},
+                {"poka", "while"},
+                {"yumat", "do"},
+                {"poyasnit", "out"},
+                {"za", "outfirst"},
+                {"i", "outelem"},
+                {"alyo", "in"},
+                {"atas", "throw"},
+                {"hare", "break"},
+                {"sachkovat", "continue"},
+                {"lipa", "null"},
+                {"strela", "if"},
+                {"zabit", "then"},
+                {"zhigan", "true"},
+                {"fraer", "false"},
+                {"hapnut", "new"},
+                {"valnut", "delete"},
+                {"laskat", "return"},
+                {"malina", "struct"}
             };
             auto replacesTypes = std::vector<std::pair<std::string, std::string>>{
-                {"погоняло\\s", "string"},
-                {"шифер\\s", "int"},
-                {"колонна\\s", "long"},
-                {"плавник\\s", "float"},
-                {"двойник\\s", "double"},
-                {"гудрон\\s", "char"},
-                {"чубрик\\s", "bool"},
+                {"pogonyalo", "string"},
+                {"shifer", "int"},
+                {"colonna", "long"},
+                {"plavnik", "float"},
+                {"dvoynik", "double"},
+                {"gudron", "char"},
+                {"chubrik", "bool"},
             };
             auto replacesOperations = std::vector<std::pair<std::string, std::string>>{
-                {"внатуре\\s", "equal"},
-                {"по масти\\s", "init"},
-                {"повесить\\s", "="},
-                {"поболее\\s", ">"},
-                {"поменее\\s", "<"},
-                {"полевее\\s", "<<"},
-                {"поправее\\s", ">>"},
+                {"vnature", "equal"},
+                {"po masti", "init"},
+                {"povesit", "="},
+                {"pobolee", ">"},
+                {"pomenee", "<"},
+                {"polevee", "<<"},
+                {"popravee", ">>"},
             };
             for (int it = 0; it < tokens->size(); ++it) {
                 auto& elem = tokens->at(it);

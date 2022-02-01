@@ -5,23 +5,22 @@
 
 namespace bndts {
 	namespace synt {
-		struct List {
-			std::list<List*> nodes;
+		struct Node {
+			std::list<Node*> nodes;
 			std::string token = 0;
 		};
 
-		List* ParseStruct(List* list, const std::vector<Token>& tokens, int* pos) {
-
+		Node* ParseStruct(Node* list, const std::vector<Token>& tokens, int* pos) {
+			return 0;
 		}
 
-		List* ParseSegment(List* list, const std::vector<Token>& tokens, int* pos) {
-			if (tokens[*pos].id == "KEYWORD" && tokens[*pos].value == "struct")
-				
+		Node* ParseSegment(Node* list, const std::vector<Token>& tokens, int* pos) {
+			return 0;
 		}
 
-		List* Analyze(const std::vector<Token>& tokens) {
-			List* list = 0;
-			
+		Node* Analyze(const std::vector<Token>& tokens) {
+			Node* list = 0;
+			return list;
 		}
 	}
 }

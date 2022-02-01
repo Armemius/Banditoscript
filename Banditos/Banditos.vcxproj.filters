@@ -57,4 +57,7 @@
       <Filter>Файлы заголовков\Syntaxer</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\Sussy\Thulan\Translator\Source.txt" />
+  </ItemGroup>
 </Project>

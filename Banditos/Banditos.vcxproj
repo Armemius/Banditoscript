@@ -32,6 +32,9 @@
     <ClInclude Include="Token.h" />
     <ClInclude Include="Utility.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="..\..\Sussy\Thulan\Translator\Source.txt" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

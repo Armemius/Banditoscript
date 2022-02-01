@@ -6,47 +6,47 @@ namespace bndts {
 	namespace lex {
         auto keywords = std::vector<std::string>{
             // Modifiers
-            "чётк\\S\\S\\s",		// const
-            "широк\\S\\S\\s",		// array
-            "оч\\s",			// array dimension
-            "блатн\\S\\S\\s",		// unsigned
-            "посыльн\\S\\S\\s",	// pointer
+            "\\b(chotkiy|chotkaya|chotkoe)\\b",		// const
+            "\\b(shirokiy|shirokaya|shirokoe)\\b",		// array
+            "\\boch\\b",			// array dimension
+            "\\b(blatnoy|blatnaya|blatnoe)\\b",		// unsigned
+            "\\b(posilniy|posilnaya|posilnoe)\\b",	// pointer
 
-            "лапша\\s",		// func
-            "прогнать\\s",		// for
-            "до\\s",			// for
-            "шаг\\s",			// for
-            "пока\\s",			// while
-            "юмать\\s",		// do
-            "пояснить\\s",		// output
-            "за\\s",			// output
-            "и\\s",			// output
-            "алё\\s",			// input
-            "атас\\s",			// throw
-            "харэ\\s",			// break
-            "сачковать\\s",	// continue
-            "липа\\s",			// null
-            "стрела\\s",		// if
-            "забить\\s",		// then
-            "жиган\\s",		// true
-            "фраер\\s",		// false
-            "забить\\s",		// then
-            "хапнуть\\s",		// new
-            "вальнуть\\s",		// delete
-            "ласкать\\s",		// return
-            "малина\\s"		// struct
+            "\\blapsha\\b",		// func
+            "\\bprognat\\b",		// for
+            "\\bdo\\b",			// for
+            "\\bshag\\b",			// for
+            "\\bpoka\\b",			// while
+            "\\byumat\\b",		// do
+            "\\bpoyasnit\\b",		// output
+            "\\bza\\b",			// output
+            "\\bi\\b",			// output
+            "\\balyo\\b",			// input
+            "\\batas\\b",			// throw
+            "\\bhare\\b",			// break
+            "\\bsachkovat\\b",	// continue
+            "\\blipa\\b",			// null
+            "\\bstrela\\b",		// if
+            "\\bzabit\\b",		// then
+            "\\bzhigan\\b",		// true
+            "\\bfraer\\b",		// false
+            "\\bzabit\\b",		// then
+            "\\bhapnut\\b",		// new
+            "\\bvalnut\\b",		// delete
+            "\\blaskat\\b",		// return
+            "\\bmalina\\b"		// struct
         };
         auto systemTypes = std::vector<std::string>{
-            "погоняло\\s",		// string
-            "шифер\\s",		// int
-            "колонна\\s",		// long
-            "плавник\\s",		// float
-            "двойник\\s",		// double
-            "гудрон\\s",		// char
-            "чубрик\\s",		// bool
+            "\\bpogonyalo\\b",		// string
+            "\\bshifer\\b",		// int
+            "\\bcolonna\\b",		// long
+            "\\bplavnik\\b",		// float
+            "\\bdvoynik\\b",		// double
+            "\\bgudron\\b",		// char
+            "\\bchubrik\\b",		// bool
         };
-        auto operations = std::vector<std::string>{
-            "внатуре\\s",
+        auto operations = std::vector<std::string> {
+            "==",
             "<=",
             ">=",
             ">",
@@ -55,19 +55,18 @@ namespace bndts {
             "--",
             "<<",
             ">>",
-            "по масти\\s", // init
-            "повесить\\s", // set
+            "+=",
+            "-=",
+            "*=",
+            "/=",
+            "=",
             "-",
             "/",
             "*",
             "%",
             "&",
             "!",
-            "+",
-            "+=",
-            "-=",
-            "*=",
-            "/="
+            "+"
         };
         auto grammar = std::vector<std::string>{
             ":",
