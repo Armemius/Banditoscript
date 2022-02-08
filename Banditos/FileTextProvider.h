@@ -6,6 +6,7 @@
 namespace bndts {
 	namespace lex {
 		class FileTextProvider : public ITextProvider {
+		public:
 			std::string Get(const std::string& text) override;
 		};
 

@@ -16,7 +16,7 @@ namespace bndts {
 			Lexer(ITextProvider *textProvider);
 			~Lexer();
 			std::vector<Token> Parse(const std::string& raw, const std::string& file);
-			std::vector<Token> Get(const std::string& raw);
+			std::vector<Token> Get(const std::string& raw, const std::string& name);
             void Normalize(std::vector<Token>* tokens);
 		};
 
@@ -61,6 +61,7 @@ namespace bndts {
                 {"COMMENT", R"(\/\/.*|\/\*[\s\S]*?\*\/)"},
                 {"STRING", R"(\'(\\.|[^'\\])*\'|\"(\\.|[^"\\])*\")"},
                 {"KEYWORD", Join(keywords)},
+                {"MOD", Join(mods)},
                 {"TYPE", Join(systemTypes)},
                 {"OPERATION", SJoin(operations)},
                 {"GRAMMAR", SJoin(grammar)},
@@ -112,8 +113,8 @@ namespace bndts {
                 return tokens;
         }
 
-        std::vector<Token> Lexer::Get(const std::string& raw) {
-            auto tokens = Parse(raw);
+        std::vector<Token> Lexer::Get(const std::string& raw, const std::string& name) {
+            auto tokens = Parse(raw, name);
             Normalize(&tokens);
             return tokens;
         }
@@ -142,6 +143,7 @@ namespace bndts {
                 {"lipa", "null"},
                 {"strela", "if"},
                 {"zabit", "then"},
+                {"inache", "else"},
                 {"zhigan", "true"},
                 {"fraer", "false"},
                 {"hapnut", "new"},
@@ -174,7 +176,7 @@ namespace bndts {
                     replaces = &replacesOperations;
                 else if (tokens->at(it).id == "TYPE")
                     replaces = &replacesTypes;
-                else if (tokens->at(it).id == "KEYWORD")
+                else if (tokens->at(it).id == "KEYWORD" || tokens->at(it).id == "MOD")
                     replaces = &replacesKeywords;
                 else if (replaces == nullptr)
                     continue;

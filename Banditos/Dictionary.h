@@ -3,18 +3,12 @@
 #include <string>
 
 namespace bndts {
-	namespace lex {
+    namespace lex {
         auto keywords = std::vector<std::string>{
-            // Modifiers
-            "\\b(chotkiy|chotkaya|chotkoe)\\b",		// const
-            "\\b(shirokiy|shirokaya|shirokoe)\\b",		// array
-            "\\boch\\b",			// array dimension
-            "\\b(blatnoy|blatnaya|blatnoe)\\b",		// unsigned
-            "\\b(posilniy|posilnaya|posilnoe)\\b",	// pointer
-
             "\\blapsha\\b",		// func
             "\\bprognat\\b",		// for
             "\\bdo\\b",			// for
+            "\\bpo\\b",			// for
             "\\bshag\\b",			// for
             "\\bpoka\\b",			// while
             "\\byumat\\b",		// do
@@ -28,6 +22,7 @@ namespace bndts {
             "\\blipa\\b",			// null
             "\\bstrela\\b",		// if
             "\\bzabit\\b",		// then
+            "\\binache\\b",		// then
             "\\bzhigan\\b",		// true
             "\\bfraer\\b",		// false
             "\\bzabit\\b",		// then
@@ -35,6 +30,14 @@ namespace bndts {
             "\\bvalnut\\b",		// delete
             "\\blaskat\\b",		// return
             "\\bmalina\\b"		// struct
+        };
+
+        auto mods = std::vector<std::string>{
+            "\\b(chotkiy|chotkaya|chotkoe)\\b",		// const
+            "\\b(shirokiy|shirokaya|shirokoe)\\b",	// array
+            "\\boch\\b",			                // array dimension
+            "\\b(blatnoy|blatnaya|blatnoe)\\b",		// unsigned
+            "\\b(posilniy|posilnaya|posilnoe)\\b",	// pointer
         };
         auto systemTypes = std::vector<std::string>{
             "\\bpogonyalo\\b",		// string
@@ -72,5 +75,5 @@ namespace bndts {
             ":",
             ","
         };
-	}
+    }
 }

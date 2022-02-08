@@ -4,6 +4,7 @@
 namespace bndts {
 	namespace lex {
 		class RawTextProvider : public ITextProvider {
+		public:
 			std::string Get(const std::string& text) override;
 		};
 
