@@ -1,11 +1,12 @@
 malina kicha Pognali
 	(shifer rbbr) Pognali
-		rbbr = rbbr * *(--rbbr)
+		rbbr = rbbr
 	Shuher
 Shuher
 
 lapsha func() Pognali
-	laskat -2
+	laskat 2--
+	1 + 2 * 3
 Shuher
 
 lapsha main(shirokoe pogonyalo params) Pognali

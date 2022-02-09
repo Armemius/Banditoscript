@@ -11,46 +11,48 @@
 namespace bndts {
 	namespace synt {
 		// Bool for right-associated
-		auto prio = std::map<std::pair<int, bool>, std::string>{
-			{{0, false}, "++pt"},
-			{{0, false}, "--pt"},
-			{{1, true}, "++pr"},
-			{{1, true}, "--pr"},
-			{{1, true}, "-u"},
-			{{1, true}, "+u"},
-			{{1, true}, "!u"},
-			{{1, true}, "~u"},
-			{{1, true}, "&u"},
-			{{1, true}, "*u"},
-			{{2, false}, "*b"},
-			{{2, false}, "/b"},
-			{{2, false}, "%b"},
-			{{2, false}, "+b"},
-			{{2, false}, "-b"},
-			{{3, false}, "<<b"},
-			{{3, false}, ">>b"},
-			{{4, false}, "<b"},
-			{{4, false}, ">b"},
-			{{4, false}, "<=b"},
-			{{4, false}, ">=b"},
-			{{5, false}, "==b"},
-			{{5, false}, "!=b"},
-			{{6, false}, "&b"},
-			{{7, false}, "^b"},
-			{{8, false}, "|b"},
-			{{9, false}, "&&b"},
-			{{10, false}, "||b"},
-			{{11, true}, "=b"},
-			{{11, true}, "*=b"},
-			{{11, true}, "/=b"},
-			{{11, true}, "%=b"},
-			{{11, true}, "+=b"},
-			{{11, true}, "-=b"},
-			{{11, true}, "<<=b"},
-			{{11, true}, ">>=b"},
-			{{11, true}, "&=b"},
-			{{11, true}, "|=b"},
-			{{11, true}, "^=b"},
+		auto prio = std::map<std::string, std::pair<int, bool>> {
+			{"++t", {0, false}},
+			{"--t", {0, false}},
+			{"++r", {1, true}},
+			{"--r", {1, true}},
+			{"-u", {1, true}},
+			{"+u", {1, true}},
+			{"!u", {1, true}},
+			{"~u", {1, true}},
+			{"&u", {1, true}},
+			{"*u", {1, true}},
+			{"*b", {2, false}},
+			{"/b", {2, false}},
+			{"%b", {2, false}},
+			{"+b", {3, false}},
+			{"-b", {3, false}},
+			{"<<b", {4, false}},
+			{">>b", {4, false}},
+			{"<b", {5, false}},
+			{">b", {5, false}},
+			{"<=b", {5, false}},
+			{">=b", {5, false}},
+			{"==b", {6, false}},
+			{"!=b", {6, false}},
+			{"&b", {7, false}},
+			{"^b", {8, false}},
+			{"|b", {9, false}},
+			{"&&b", {10, false}},
+			{"||b", {11, false}},
+			{"=b", {12, true}},
+			{"*=b", {12, true}},
+			{"/=b", {12, true}},
+			{"%=b", {12, true}},
+			{"+=b", {12, true}},
+			{"-=b", {12, true}},
+			{"<<=b", {12, true}},
+			{">>=b", {12, true}},
+			{"&=b", {12, true}},
+			{"|=b", {12, true}},
+			{"^=b", {12, true}},
+			{"(", {13, false}},
+			{")", {13, false}}
 		};
 
 		struct Node {
@@ -191,19 +193,17 @@ namespace bndts {
 
 					if (curr.value == "++" || curr.value == "--") {
 						if (prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID")
-							curr.value += "pt";
+							curr.value += "t";
 						else if (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID")
-							curr.value += "pr";
+							curr.value += "r";
 						else
 							Err(curr, orig, "expression for increment or decrement");
 					}
-					else if (it > 0 && it < exprtkn.size() - 1
-						&& (prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID" || prev.value == "++pt" || prev.value == "--pt")
+					else if ((prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID" || prev.value == "++t" || prev.value == "--t")
 						&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID" || next.value == "-" || next.value == "--" 
 							|| next.value == "++" || next.value == "*" || next.value == "&" || next.value == "!" || next.value == "~"))
 						curr.value += 'b';
-					else if (it > 0 && it < exprtkn.size() - 1
-							&& !(prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID")
+					else if (!(prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID")
 							&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID"))
 							curr.value += 'u';
 					else
@@ -216,8 +216,9 @@ namespace bndts {
 #ifdef SYNTDBG
 			std::cout << "\n\r";
 #endif
-			auto& prev = exprtkn[0];
+			auto prev = exprtkn[0];
 			int st = 0;
+
 			for (auto& it : exprtkn) {
 #ifdef SYNTDBG
 				std::cout << it.value << "(" << it.id << ") " << st << "\n\r";
@@ -247,6 +248,59 @@ namespace bndts {
 				prev = it;
 			}
 			auto stk = std::stack<Token>();
+			auto res = std::vector<Token>();
+			
+			for (auto& tk : exprtkn) {
+				for (auto& tk : res) {
+					std::cout << tk.value << " ";
+				}
+				std::cout << "\n\r" << stk.size() << " " << res.size() << "\n\r";
+				if (tk.id == "VALUE" || tk.id == "ID" || tk.id == "OPERATION" && tk.value.back() == 't') {
+					res.push_back(tk);
+				}
+				else if (tk.id == "OPERATION" && (tk.value.back() == 'r' || tk.value.back() == 'u')) {
+					stk.push(tk);
+				}
+				else if (Check(tk, "BRACKETS", "(")) {
+					stk.push(tk);
+				}
+				else if (Check(tk, "BRACKETS", ")")) {
+					if (stk.empty())
+						Err(tk, orig, "bracket");
+					while (!Check(stk.top(), "BRACKETS", "(")) {
+						res.push_back(stk.top());
+						stk.pop();
+						if (stk.empty())
+							Err(tk, orig, "bracket");
+					}
+					stk.pop();
+				}
+				else if (tk.id == "OPERATION" && (tk.value.back() == 'b')) {
+					if (!stk.empty())
+					while ((tk.value.back() == 'r' || tk.value.back() == 'u')
+						|| ((prio[tk.value].first >= prio[stk.top().value].first)
+						|| (prio[tk.value].first == prio[stk.top().value].first && prio[stk.top().value].second))) {
+						std::cout << "PUSHEEN!!!!";
+						std::cout << tk.value << "\n" << (tk.value.back() == 'r' || tk.value.back() == 'u') << (prio[tk.value].first >= prio[stk.top().value].first) << (prio[tk.value].first == prio[stk.top().value].first && prio[stk.top().value].second);
+						res.push_back(stk.top());
+						stk.pop();
+						if (stk.empty())
+							break;
+					}
+					stk.push(tk);
+					
+				}
+			}
+			while (!stk.empty()) {
+				res.push_back(stk.top());
+				stk.pop();
+			}
+#ifdef SYNTDBG
+			for (auto& tk : res) {
+				std::cout << tk.value << " ";
+			}
+			std::cout << "\n";
+#endif
 			return 0;
 		}
 
