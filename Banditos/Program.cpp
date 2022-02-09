@@ -15,7 +15,7 @@ int main(int argc, char* argv[]) {
 	*/
 	setlocale(LC_ALL, "rus");
 	try {
-		auto path = R"(D:\Le projects\Sussy\Thulan\Translator\Source.txt)";
+		auto path = R"(Source.txt)";
 		auto txt = lex::FileTextProvider();
 		lex::Lexer lexa(new lex::RawTextProvider());
 		auto raw = txt.Get(path);

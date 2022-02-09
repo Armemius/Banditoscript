@@ -1,0 +1,16 @@
+malina kicha Pognali
+	(shifer rbbr) Pognali
+		rbbr = rbbr * *(--rbbr)
+	Shuher
+Shuher
+
+lapsha func() Pognali
+	laskat -2
+Shuher
+
+lapsha main(shirokoe pogonyalo params) Pognali
+	type name = 2 * --(2 * 3)-- * 2
+	proehat it po tipomassiv Pognali
+		
+	Shuher
+Shuher

@@ -128,9 +128,10 @@ namespace bndts {
                 {"(posilniy|posilnaya|posilnoe)", "ptr"},
 
                 {"lapsha", "func"},
+                {"proehat", "foreach"},
                 {"prognat", "for"},
                 {"do", "to"},
-                {"shag", "step"},
+                {"po", "step"},
                 {"poka", "while"},
                 {"yumat", "do"},
                 {"poyasnit", "out"},

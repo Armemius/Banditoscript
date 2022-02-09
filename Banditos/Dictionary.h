@@ -6,6 +6,7 @@ namespace bndts {
     namespace lex {
         auto keywords = std::vector<std::string>{
             "\\blapsha\\b",		// func
+            "\\bproehat\\b",		// for
             "\\bprognat\\b",		// for
             "\\bdo\\b",			// for
             "\\bpo\\b",			// for
@@ -22,7 +23,7 @@ namespace bndts {
             "\\blipa\\b",			// null
             "\\bstrela\\b",		// if
             "\\bzabit\\b",		// then
-            "\\binache\\b",		// then
+            "\\binache\\b",		// else
             "\\bzhigan\\b",		// true
             "\\bfraer\\b",		// false
             "\\bzabit\\b",		// then

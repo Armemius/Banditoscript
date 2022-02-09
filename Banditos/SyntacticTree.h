@@ -171,7 +171,24 @@ namespace bndts {
 				Err(tk[pos], orig, "bracket");
 			for (int it = 0; it < exprtkn.size(); ++it) {
 				if (exprtkn[it].id == "OPERATION") {
-					auto &prev = exprtkn[it - 1], &curr = exprtkn[it], &next = exprtkn[it + 1];
+
+					Token &curr = exprtkn[it], prev, next;
+					if (it > 0) {
+						prev = exprtkn[it - 1];
+					}
+					else {
+						prev.id = "NULL";
+						prev.value = "NULL";
+					}
+					if (it < exprtkn.size() - 1) {
+						next = exprtkn[it + 1];
+					}
+					else {
+						next.id = "NULL";
+						next.value = "NULL";
+					}
+
+
 					if (curr.value == "++" || curr.value == "--") {
 						if (prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID")
 							curr.value += "pt";
@@ -181,8 +198,9 @@ namespace bndts {
 							Err(curr, orig, "expression for increment or decrement");
 					}
 					else if (it > 0 && it < exprtkn.size() - 1
-						&& (prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID")
-						&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID" || next.value == "-" || next.value == "--" || next.value == "++"))
+						&& (prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID" || prev.value == "++pt" || prev.value == "--pt")
+						&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID" || next.value == "-" || next.value == "--" 
+							|| next.value == "++" || next.value == "*" || next.value == "&" || next.value == "!" || next.value == "~"))
 						curr.value += 'b';
 					else if (it > 0 && it < exprtkn.size() - 1
 							&& !(prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID")
@@ -220,7 +238,7 @@ namespace bndts {
 					if (it.id == "BRACKETS" && it.value == ")")
 						st = 1;
 					if (it.id == "BRACKETS" && it.value == "(")
-						st = 1;
+						st = 0;
 					if (it.id == "OPERATION" && it.value.back() == 'b')
 						st = 0;
 					else if (it.id == "VALUE" || it.id == "ID")
@@ -249,6 +267,8 @@ namespace bndts {
 						}
 					}
 					while (Check(tk[pos], "MOD")) {
+						if (Check(tk[pos], "MOD", "dim"))
+							Err(tk[pos], orig, "another modifier");
 						pos++;
 					}
 				}
@@ -331,7 +351,7 @@ namespace bndts {
 			else if (Check(tk[pos], "KEYWORD", "in")) {
 				pos++;
 				if (Check(tk[pos], "ID")) {
-					pos++;
+pos++;
 				}
 				if (Check(tk[pos], "ENDLINE")) {
 					pos++;
@@ -339,48 +359,102 @@ namespace bndts {
 				else {
 					Err(tk[pos], orig, "end of line");
 				}
-			}   
+			}
 			else if (Check(tk[pos], "KEYWORD", "out")) {
+			pos++;
+			if (Check(tk[pos], "KEYWORD", "outfirst")) {
+				pos++;
+			}
+			else {
+				Err(tk[pos], orig, "'za' keyword");
+			}
+			if (Check(tk[pos], "STRING")) {
+				pos++;
+			}
+			else
+				ParseExpr(list, tk, pos, orig);
+			while (Check(tk[pos], "KEYWORD", "outelem")) {
+				pos++;
+				if (Check(tk[pos], "STRING")) {
 					pos++;
-					if (Check(tk[pos], "KEYWORD", "outfirst")) {
-						pos++;
-					}
-					else {
-						Err(tk[pos], orig, "'za' keyword");
-					}
-					if (Check(tk[pos], "STRING")) {
-						pos++;
-					}
-					else 
-						ParseExpr(list, tk, pos, orig);
-					while (Check(tk[pos], "KEYWORD", "outelem")) {
-						pos++;
-						if (Check(tk[pos], "STRING")) {
-							pos++;
-						}
-						else
-							ParseExpr(list, tk, pos, orig);
-					}
-					if (Check(tk[pos], "ENDLINE")) {
-						pos++;
-					}
-					else {
-						Err(tk[pos], orig, "end of line");
-					}
+				}
+				else
+					ParseExpr(list, tk, pos, orig);
+			}
+			if (Check(tk[pos], "ENDLINE")) {
+				pos++;
+			}
+			else {
+				Err(tk[pos], orig, "end of line");
+			}
 			}
 			else if (Check(tk[pos], "KEYWORD", "if")) {
+			pos++;
+			ParseExpr(list, tk, pos, orig);
+			if (Check(tk[pos], "KEYWORD", "then")) {
+				pos++;
+			}
+			else
+				Err(tk[pos], orig, "'then' keyword");
+			ParseBlock(list, tk, pos, orig);
+			if (Check(tk[pos], "KEYWORD", "else")) {
+				pos++;
+				ParseBlock(list, tk, pos, orig);
+			}
+			}
+			else if (Check(tk[pos], "KEYWORD", "while")) {
+			pos++;
+			ParseExpr(list, tk, pos, orig);
+			if (Check(tk[pos], "KEYWORD", "then")) {
+				pos++;
+				ParseBlock(list, tk, pos, orig);
+			}
+			else
+				Err(tk[pos], orig, "'then' keyword");
+			}
+			else if (Check(tk[pos], "KEYWORD", "do")) {
+			pos++;
+			ParseExpr(list, tk, pos, orig);
+			if (Check(tk[pos], "KEYWORD", "then")) {
+				pos++;
+				ParseBlock(list, tk, pos, orig);
+			}
+			else
+				Err(tk[pos], orig, "'then' keyword");
+			}
+			else if (Check(tk[pos], "KEYWORD", "for")) {
+			pos++;
+			if (Check(tk[pos], "ID")) {
+				pos++;
+			}
+			else
+				Err(tk[pos], orig, "name");
+			if (Check(tk[pos], "KEYWORD", "to")) {
+				pos++;
+			}
+			else
+				Err(tk[pos], orig, "'to' keyword");
+			ParseExpr(list, tk, pos, orig);
+			if (Check(tk[pos], "KEYWORD", "step")) {
 				pos++;
 				ParseExpr(list, tk, pos, orig);
-				if (Check(tk[pos], "KEYWORD", "then")) {
-					pos++;
-				} 
-				else 
-					Err(tk[pos], orig, "'then' keyword");
-				ParseBlock(list, tk, pos, orig);
-				if (Check(tk[pos], "KEYWORD", "else")) {
-					pos++;
-					ParseBlock(list, tk, pos, orig);
+			}
+			ParseBlock(list, tk, pos, orig);
+			}
+			else if (Check(tk[pos], "KEYWORD", "foreach")) {
+				pos++;
+				if (Check(tk[pos], "ID")) {
+				pos++;
 				}
+				else
+					Err(tk[pos], orig, "name");
+				if (Check(tk[pos], "KEYWORD", "step")) {
+					pos++;
+				}
+				else
+					Err(tk[pos], orig, "'step' keyword");
+				ParseExpr(list, tk, pos, orig);
+				ParseBlock(list, tk, pos, orig);
 			}
 			else {
 				int prevpos = pos;
@@ -436,6 +510,8 @@ namespace bndts {
 						}
 					}
 					while (Check(tk[pos], "MOD")) {
+						if (Check(tk[pos], "MOD", "dim"))
+							Err(tk[pos], orig, "another modifier");
 						pos++;
 					}
 				}
@@ -523,12 +599,17 @@ namespace bndts {
 			else {
 				Err(tk[pos], orig, "opening bracket");
 			}
-			ParseParams(list, tk, pos, orig);
 			if (Check(tk[pos], "BRACKETS", ")")) {
 				++pos;
 			}
 			else {
-				Err(tk[pos], orig, "closing bracket");
+				ParseParams(list, tk, pos, orig);
+				if (Check(tk[pos], "BRACKETS", ")")) {
+					++pos;
+				}
+				else {
+					Err(tk[pos], orig, "closing bracket");
+				}
 			}
 			ParseBlock(list, tk, pos, orig);
 			return list;
