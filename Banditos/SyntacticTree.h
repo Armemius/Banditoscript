@@ -51,13 +51,15 @@ namespace bndts {
 			{"&=b", {12, true}},
 			{"|=b", {12, true}},
 			{"^=b", {12, true}},
-			{"(", {13, false}},
-			{")", {13, false}}
+			{"(", {100, false}},
+			{")", {100, false}}
 		};
 
 		struct Node {
 			std::list<Node*> nodes;
 			std::string token = "";
+			int mods = 0;
+			int params = 0;
 		};
 
 		void Err(const Token& tt, const std::string& orig, std::string exp = "") {
@@ -73,7 +75,7 @@ namespace bndts {
 			std::string err = "Unexpected token \"" + tt.value + ":" + tt.id + "\" at "
 				+ tt.filename + ":" + std::to_string(tt.pos) + " (Col: " + std::to_string(tt.col)
 				+ "; Line: " + std::to_string(tt.line) + ")" + (exp.size() ? "\n\rExpected: " + exp : "") + "\n\r"
-				+ line + (fin == tt.pos ? "" : "\n\r") + arrow + "^\n\r";
+				+ line + (fin == tt.pos ? "" : "\n\r") + "^\n\r";
 			throw std::exception(err.c_str());
 		}
 
@@ -131,7 +133,11 @@ namespace bndts {
 			if (Check(tk[pos], "VALUE")) {
 				exprtkn.push_back(tk[pos]);
 				pos++;
-			} else if (Check(tk[pos], "KEYWORD", "true")) {
+			} else if (Check(tk[pos], "STRING")) {
+				exprtkn.push_back(tk[pos]);
+				pos++;
+			}
+			else if (Check(tk[pos], "KEYWORD", "true")) {
 				exprtkn.push_back(tk[pos]);
 				exprtkn.back().id = "VALUE";
 				pos++;
@@ -199,12 +205,12 @@ namespace bndts {
 						else
 							Err(curr, orig, "expression for increment or decrement");
 					}
-					else if ((prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID" || prev.value == "++t" || prev.value == "--t")
-						&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID" || next.value == "-" || next.value == "--" 
+					else if ((prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "STRING" || prev.id == "ID" || prev.value == "++t" || prev.value == "--t")
+						&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "STRING" || next.id == "ID" || next.value == "-" || next.value == "--"
 							|| next.value == "++" || next.value == "*" || next.value == "&" || next.value == "!" || next.value == "~"))
 						curr.value += 'b';
-					else if (!(prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID")
-							&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID"))
+					else if (!(prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID" || prev.id == "STRING")
+							&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID" || next.id == "STRING"))
 							curr.value += 'u';
 					else
 						Err(exprtkn[it], orig, "expressions for binary operation");
@@ -227,7 +233,7 @@ namespace bndts {
 				if (prev.value == "(" && it.value == ")")
 					Err(it, orig, "expression");
 				if (st == 0) {
-					if (it.id == "VALUE" || it.id == "ID")
+					if (it.id == "VALUE" || it.id == "ID" || it.id == "STRING")
 						st = 1;
 					else if (it.id == "BRACKETS" && it.value == "(")
 						st = 0;
@@ -242,7 +248,7 @@ namespace bndts {
 						st = 0;
 					if (it.id == "OPERATION" && it.value.back() == 'b')
 						st = 0;
-					else if (it.id == "VALUE" || it.id == "ID")
+					else if (it.id == "VALUE" || it.id == "ID" || it.id == "STRING")
 						Err(it, orig, "binary operation");
 				}
 				prev = it;
@@ -255,7 +261,7 @@ namespace bndts {
 					std::cout << tk.value << " ";
 				}
 				std::cout << "\n\r" << stk.size() << " " << res.size() << "\n\r";
-				if (tk.id == "VALUE" || tk.id == "ID" || tk.id == "OPERATION" && tk.value.back() == 't') {
+				if (tk.id == "VALUE" || tk.id == "STRING" || tk.id == "ID" || tk.id == "OPERATION" && tk.value.back() == 't') {
 					res.push_back(tk);
 				}
 				else if (tk.id == "OPERATION" && (tk.value.back() == 'r' || tk.value.back() == 'u')) {
@@ -365,6 +371,24 @@ namespace bndts {
 #endif 
 				ParseVar(list, tk, pos, orig);
 			}
+			else if (Check(tk[pos], "KEYWORD", "break")) {
+				pos++;
+				if (Check(tk[pos], "ENDLINE")) {
+					pos++;
+				}
+				else {
+					Err(tk[pos], orig, "end of line");
+				}
+			}
+			else if (Check(tk[pos], "KEYWORD", "continue")) {
+				pos++;
+				if (Check(tk[pos], "ENDLINE")) {
+					pos++;
+				}
+				else {
+					Err(tk[pos], orig, "end of line");
+				}
+			}
 			else if (Check(tk[pos], "KEYWORD", "delete")) {
 					pos++;
 					if (Check(tk[pos], "ID")) {
@@ -392,9 +416,7 @@ namespace bndts {
 			}
 			else if (Check(tk[pos], "KEYWORD", "throw")) {
 				pos++;
-				if (Check(tk[pos], "STRING")) {
-					pos++;
-				}
+				ParseExpr(list, tk, pos, orig);
 				if (Check(tk[pos], "ENDLINE")) {
 					pos++;
 				}
@@ -405,7 +427,7 @@ namespace bndts {
 			else if (Check(tk[pos], "KEYWORD", "in")) {
 				pos++;
 				if (Check(tk[pos], "ID")) {
-pos++;
+					pos++;
 				}
 				if (Check(tk[pos], "ENDLINE")) {
 					pos++;
@@ -422,18 +444,10 @@ pos++;
 			else {
 				Err(tk[pos], orig, "'za' keyword");
 			}
-			if (Check(tk[pos], "STRING")) {
-				pos++;
-			}
-			else
-				ParseExpr(list, tk, pos, orig);
+			ParseExpr(list, tk, pos, orig);
 			while (Check(tk[pos], "KEYWORD", "outelem")) {
 				pos++;
-				if (Check(tk[pos], "STRING")) {
-					pos++;
-				}
-				else
-					ParseExpr(list, tk, pos, orig);
+				ParseExpr(list, tk, pos, orig);
 			}
 			if (Check(tk[pos], "ENDLINE")) {
 				pos++;

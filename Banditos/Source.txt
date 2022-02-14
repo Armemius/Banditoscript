@@ -6,12 +6,18 @@ Shuher
 
 lapsha func() Pognali
 	laskat 2--
-	1 + 2 * 3
+	shirokiy sus bruh
 Shuher
 
 lapsha main(shirokoe pogonyalo params) Pognali
-	type name = 2 * --(2 * 3)-- * 2
+	type name = sussy * --(2 * 3)-- * 2
+	alyo name
+	strela "amogus" == "sus" zabit
+		rbbr *= rbbr
 	proehat it po tipomassiv Pognali
-		
+		poyasnit za it i "222" + "222"
+		strela it == 666 zabit 
+			atas "bruh" hehe
+			
 	Shuher
 Shuher
