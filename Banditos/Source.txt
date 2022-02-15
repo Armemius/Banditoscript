@@ -1,5 +1,6 @@
 malina kicha Pognali
-	(shifer rbbr) Pognali
+	(posilniy shifer rbbr) Pognali
+		shifer sus, aboba
 		rbbr = rbbr
 	Shuher
 Shuher
@@ -17,7 +18,7 @@ lapsha main(shirokoe pogonyalo params) Pognali
 	proehat it po tipomassiv Pognali
 		poyasnit za it i "222" + "222"
 		strela it == 666 zabit 
-			atas "bruh" hehe
+			atas "bruh"
 			
 	Shuher
 Shuher

@@ -8,6 +8,11 @@
 
 #define SYNTDBG
 
+#define CONST_MODIFIER	0b00000001
+#define PTR_MODIFIER	0b00000010
+#define UNSG_MODIFIER	0b00000100
+#define ARR_MODIFIER	0b00001000
+
 namespace bndts {
 	namespace synt {
 		// Bool for right-associated
@@ -57,7 +62,9 @@ namespace bndts {
 
 		struct Node {
 			std::list<Node*> nodes;
+			Node* prev;
 			std::string token = "";
+			std::string value = "";
 			int mods = 0;
 			int params = 0;
 		};
@@ -91,11 +98,13 @@ namespace bndts {
 		Node* ParseExpr(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig);
 
 		Node* ParseCall(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+			Node* node = new Node{ std::list<Node*>(), list, "FUNCCALL", "", 0, 0 };
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseCall\n\r";
 #endif 
 
 			if (Check(tk[pos], "ID")) {
+				node->value = tk[pos].value;
 				pos++;
 			}
 			else {
@@ -109,8 +118,8 @@ namespace bndts {
 			}
 			pos--;
 			do {
+				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 				pos++;
-				ParseExpr(list, tk, pos, orig);
 			} while (Check(tk[pos], "GRAMMAR", ","));
 			if (Check(tk[pos], "BRACKETS", ")")) {
 				pos++;
@@ -118,7 +127,7 @@ namespace bndts {
 			else {
 				Err(tk[pos], orig, "closing bracket");
 			}
-			return 0;
+			return node;
 		}
 
 		Node* ParseExpr(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
@@ -307,32 +316,81 @@ namespace bndts {
 			}
 			std::cout << "\n";
 #endif
-			return 0;
+			auto nodez = std::stack<Node*>();
+			for (auto& tk : res) {
+				Node* node = new Node{ std::list<Node*>(), list, tk.id, tk.value, 0, 0 };
+				if (tk.id == "OPERATION") {
+					if (tk.value.back() == 'b') {
+						auto n1 = nodez.top();
+						nodez.pop();
+						auto n2 = nodez.top();
+						nodez.pop();
+						node->nodes.push_back(n1);
+						node->nodes.push_back(n2);
+						nodez.push(node);
+					}
+					else {
+						auto n1 = nodez.top();
+						nodez.pop();
+						node->nodes.push_back(n1);
+						nodez.push(node);
+					}
+				} else {
+					nodez.push(node);
+				}
+			}
+			return new Node{ std::list<Node*>{nodez.top()}, list, "EXPRESSION", "", 0, 0};
 		}
 
 		Node* ParseVar(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+			Node* node = new Node{ std::list<Node*>(), list, "VARIABLE", "", 0, 0 };
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseVar\n\r";
 #endif 
-				if (Check(tk[pos], "MOD")) {
-					if (Check(tk[pos], "MOD", "dim")) {
-						while (Check(tk[pos], "MOD", "dim")) {
-							pos++;
-						}
-						if (Check(tk[pos], "MOD", "array")) {
-							pos++;
-						}
-						else {
-							Err(tk[pos], orig, "array modifier");
-						}
-					}
-					while (Check(tk[pos], "MOD")) {
-						if (Check(tk[pos], "MOD", "dim"))
-							Err(tk[pos], orig, "another modifier");
+			if (Check(tk[pos], "MOD")) {
+				if (Check(tk[pos], "MOD", "dim")) {
+					while (Check(tk[pos], "MOD", "dim")) {
+						node->params++;
 						pos++;
 					}
+					if (Check(tk[pos], "MOD", "array")) {
+						node->mods |= ARR_MODIFIER;
+						pos++;
+					}
+					else {
+						Err(tk[pos], orig, "array modifier");
+					}
 				}
+				while (Check(tk[pos], "MOD")) {
+					if (Check(tk[pos], "MOD", "dim"))
+						Err(tk[pos], orig, "another modifier");
+					if (Check(tk[pos], "MOD", "const")) {
+						if (node->mods & CONST_MODIFIER)
+							Err(tk[pos], orig, "another modifier");
+						node->mods |= CONST_MODIFIER;
+					}
+					if (Check(tk[pos], "MOD", "ptr")) {
+						if (node->mods & PTR_MODIFIER)
+							Err(tk[pos], orig, "another modifier");
+						node->mods |= PTR_MODIFIER;
+					}
+					if (Check(tk[pos], "MOD", "unsigned")) {
+						if (node->mods & UNSG_MODIFIER)
+							Err(tk[pos], orig, "another modifier");
+						node->mods |= UNSG_MODIFIER;
+					}
+					if (Check(tk[pos], "MOD", "array")) {
+						if (node->mods & ARR_MODIFIER)
+							Err(tk[pos], orig, "another modifier");
+						node->mods |= ARR_MODIFIER;
+					}
+					pos++;
+				}
+			}
+			std::string type;
 				if (Check(tk[pos], "TYPE") || Check(tk[pos], "ID")) {
+					type = tk[pos].value;
+					node->nodes.push_back(new Node{ std::list<Node*>(), list, "TYPE", type, 0, 0 });
 					pos++;
 				}
 				else {
@@ -340,8 +398,13 @@ namespace bndts {
 				}
 				pos--;
 				do {
+					Node* var = new Node{ std::list<Node*>(), list, "VARIABLE", "", 0, 0 };
+					var->params = node->params;
+					var->mods = node->mods;
 					pos++;
+					var->nodes.push_back(new Node{ std::list<Node*>(), var, "TYPE", type, 0, 0 });
 					if (Check(tk[pos], "ID")) {
+						var->value = tk[pos].value;
 						pos++;
 					}
 					else {
@@ -349,8 +412,11 @@ namespace bndts {
 					}
 					if (Check(tk[pos], "OPERATION", "=")) {
 						pos++;
-						ParseExpr(list, tk, pos, orig);
+						var->nodes.push_back(ParseExpr(var, tk, pos, orig));
 					}
+					else
+						var->nodes.push_back(new Node{ std::list<Node*>(), var, "DEFAULT", "", 0, 0 });
+					list->nodes.push_back(var);
 				} while (Check(tk[pos], "GRAMMAR", ","));
 				if (!Check(tk[pos], "ENDLINE")) {
 					Err(tk[pos], orig, "end of line");
@@ -359,6 +425,7 @@ namespace bndts {
 		}
 
 		Node* ParseStatement(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+			Node* node = new Node{ std::list<Node*>(), list, "STATEMENT", "", 0, 0 };
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseStatement\n\r";
 #endif 
@@ -369,9 +436,11 @@ namespace bndts {
 #ifdef SYNTDBG
 				std::cout << "Sussik\n\r";
 #endif 
-				ParseVar(list, tk, pos, orig);
+				node->nodes.push_back(ParseVar(node, tk, pos, orig));
+				node->value = "VAR";
 			}
 			else if (Check(tk[pos], "KEYWORD", "break")) {
+				node->value = "BREAK";
 				pos++;
 				if (Check(tk[pos], "ENDLINE")) {
 					pos++;
@@ -381,6 +450,7 @@ namespace bndts {
 				}
 			}
 			else if (Check(tk[pos], "KEYWORD", "continue")) {
+				node->value = "CONTINUE";
 				pos++;
 				if (Check(tk[pos], "ENDLINE")) {
 					pos++;
@@ -390,6 +460,7 @@ namespace bndts {
 				}
 			}
 			else if (Check(tk[pos], "KEYWORD", "delete")) {
+					node->value = "DELETE";
 					pos++;
 					if (Check(tk[pos], "ID")) {
 						pos++;
@@ -405,8 +476,9 @@ namespace bndts {
 					}
 			}
 			else if (Check(tk[pos], "KEYWORD", "return")) {
+				node->value = "RETURN";
 				pos++;
-				ParseExpr(list, tk, pos, orig);
+				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 				if (Check(tk[pos], "ENDLINE")) {
 					pos++;
 				}
@@ -415,8 +487,9 @@ namespace bndts {
 				}
 			}
 			else if (Check(tk[pos], "KEYWORD", "throw")) {
+				node->value = "THROW";
 				pos++;
-				ParseExpr(list, tk, pos, orig);
+				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 				if (Check(tk[pos], "ENDLINE")) {
 					pos++;
 				}
@@ -425,8 +498,10 @@ namespace bndts {
 				}
 			}
 			else if (Check(tk[pos], "KEYWORD", "in")) {
+				node->value = "INPUT";
 				pos++;
 				if (Check(tk[pos], "ID")) {
+					node->nodes.push_back(new Node{ std::list<Node*>(), list, "ID", tk[pos].value, 0, 0});
 					pos++;
 				}
 				if (Check(tk[pos], "ENDLINE")) {
@@ -437,6 +512,7 @@ namespace bndts {
 				}
 			}
 			else if (Check(tk[pos], "KEYWORD", "out")) {
+			node->value = "OUTPUT";
 			pos++;
 			if (Check(tk[pos], "KEYWORD", "outfirst")) {
 				pos++;
@@ -444,10 +520,10 @@ namespace bndts {
 			else {
 				Err(tk[pos], orig, "'za' keyword");
 			}
-			ParseExpr(list, tk, pos, orig);
+			node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 			while (Check(tk[pos], "KEYWORD", "outelem")) {
 				pos++;
-				ParseExpr(list, tk, pos, orig);
+				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 			}
 			if (Check(tk[pos], "ENDLINE")) {
 				pos++;
@@ -457,42 +533,47 @@ namespace bndts {
 			}
 			}
 			else if (Check(tk[pos], "KEYWORD", "if")) {
+			node->value = "IF";
 			pos++;
-			ParseExpr(list, tk, pos, orig);
+			node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 			if (Check(tk[pos], "KEYWORD", "then")) {
 				pos++;
 			}
 			else
 				Err(tk[pos], orig, "'then' keyword");
-			ParseBlock(list, tk, pos, orig);
+			node->nodes.push_back(ParseBlock(list, tk, pos, orig));
 			if (Check(tk[pos], "KEYWORD", "else")) {
 				pos++;
-				ParseBlock(list, tk, pos, orig);
+				node->nodes.push_back(ParseBlock(list, tk, pos, orig));
 			}
 			}
 			else if (Check(tk[pos], "KEYWORD", "while")) {
+			node->value = "WHILE";
 			pos++;
-			ParseExpr(list, tk, pos, orig);
+			node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 			if (Check(tk[pos], "KEYWORD", "then")) {
 				pos++;
-				ParseBlock(list, tk, pos, orig);
+				node->nodes.push_back(ParseBlock(list, tk, pos, orig));
 			}
 			else
 				Err(tk[pos], orig, "'then' keyword");
 			}
 			else if (Check(tk[pos], "KEYWORD", "do")) {
+			node->value = "DOWHILE";
 			pos++;
-			ParseExpr(list, tk, pos, orig);
+			node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 			if (Check(tk[pos], "KEYWORD", "then")) {
 				pos++;
-				ParseBlock(list, tk, pos, orig);
+				node->nodes.push_back(ParseBlock(list, tk, pos, orig));
 			}
 			else
 				Err(tk[pos], orig, "'then' keyword");
 			}
 			else if (Check(tk[pos], "KEYWORD", "for")) {
+			node->value = "FOR";
 			pos++;
 			if (Check(tk[pos], "ID")) {
+				node->nodes.push_back(new Node{ std::list<Node*>(), list, "ID", tk[pos].value, 0, 0 });
 				pos++;
 			}
 			else
@@ -502,16 +583,18 @@ namespace bndts {
 			}
 			else
 				Err(tk[pos], orig, "'to' keyword");
-			ParseExpr(list, tk, pos, orig);
+			node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 			if (Check(tk[pos], "KEYWORD", "step")) {
 				pos++;
-				ParseExpr(list, tk, pos, orig);
+				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 			}
-			ParseBlock(list, tk, pos, orig);
+			node->nodes.push_back(ParseBlock(list, tk, pos, orig));
 			}
 			else if (Check(tk[pos], "KEYWORD", "foreach")) {
+			node->value = "FOREACH";
 				pos++;
 				if (Check(tk[pos], "ID")) {
+				node->nodes.push_back(new Node{ std::list<Node*>(), list, "ID", tk[pos].value, 0, 0 });
 				pos++;
 				}
 				else
@@ -521,19 +604,21 @@ namespace bndts {
 				}
 				else
 					Err(tk[pos], orig, "'step' keyword");
-				ParseExpr(list, tk, pos, orig);
-				ParseBlock(list, tk, pos, orig);
+				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
+				node->nodes.push_back(ParseBlock(list, tk, pos, orig));
 			}
 			else {
 				int prevpos = pos;
-				ParseExpr(list, tk, pos, orig);
+				node->value = "EXPR";
+				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 				if (pos == prevpos)
 					Err(tk[pos], orig, "statement");
 			}
-			return 0;
+			return node;
 		}
 
 		Node* ParseBlock(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+			Node* node = new Node{ std::list<Node*>(), list, "BLOCK", "", 0, 0};
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseBlock\n\r";
 #endif 
@@ -548,29 +633,33 @@ namespace bndts {
 						pos++;
 						continue;
 					}
-					ParseStatement(list, tk, pos, orig);
+					node->nodes.push_back(ParseStatement(list, tk, pos, orig));
 				}
 				pos++;
 			}
 			else {
-				ParseStatement(list, tk, pos, orig);
+				node->nodes.push_back(ParseStatement(list, tk, pos, orig));
 			}
-			return 0;
+			return node;
 		}
 
 		Node* ParseParams(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+			Node* node = new Node{ std::list<Node*>(), list, "PARAMS", "", 0, 0};
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseParams\n\r";
 #endif 
 			pos--;
 			do {
+				Node* variable = new Node{ std::list<Node*>(), node, "VARIABLE", "", 0, 0 };
 				pos++;
 				if (Check(tk[pos], "MOD")) {
 					if (Check(tk[pos], "MOD", "dim")) {
 						while (Check(tk[pos], "MOD", "dim")) {
+							variable->params++;
 							pos++;
 						}
 						if (Check(tk[pos], "MOD", "array")) {
+							variable->mods |= ARR_MODIFIER;
 							pos++;
 						}
 						else {
@@ -580,16 +669,38 @@ namespace bndts {
 					while (Check(tk[pos], "MOD")) {
 						if (Check(tk[pos], "MOD", "dim"))
 							Err(tk[pos], orig, "another modifier");
+						if (Check(tk[pos], "MOD", "const")) {
+							if (variable->mods & CONST_MODIFIER)
+								Err(tk[pos], orig, "another modifier");
+							variable->mods |= CONST_MODIFIER;
+						}
+						if (Check(tk[pos], "MOD", "ptr")) {
+							if (variable->mods & PTR_MODIFIER)
+								Err(tk[pos], orig, "another modifier");
+							variable->mods |= PTR_MODIFIER;
+						}
+						if (Check(tk[pos], "MOD", "unsigned")) {
+							if (variable->mods & UNSG_MODIFIER)
+								Err(tk[pos], orig, "another modifier");
+							variable->mods |= UNSG_MODIFIER;
+						}
+						if (Check(tk[pos], "MOD", "array")) {
+							if (variable->mods & ARR_MODIFIER)
+								Err(tk[pos], orig, "another modifier");
+							variable->mods |= ARR_MODIFIER;
+						}
 						pos++;
 					}
 				}
 				if (Check(tk[pos], "TYPE") || Check(tk[pos], "ID")) {
+					variable->nodes.push_back(new Node{ std::list<Node*>(), list, "TYPE", tk[pos].value, 0, 0});
 					pos++;
 				}
 				else {
 					Err(tk[pos], orig, "type name");
 				}
 				if (Check(tk[pos], "ID")) {
+					variable->value = tk[pos].value;
 					pos++;
 				}
 				else {
@@ -598,29 +709,39 @@ namespace bndts {
 				if (Check(tk[pos], "OPERATION", "=")) {
 					pos++;
 					if (Check(tk[pos], "VALUE")) {
+						variable->nodes.push_back(new Node{ std::list<Node*>(), list, "VALUE", tk[pos].value, 0, 0 });
+						pos++;
+					} else if (Check(tk[pos], "STRING")) {
+						variable->nodes.push_back(new Node{ std::list<Node*>(), list, "STRING", tk[pos].value, 0, 0 });
 						pos++;
 					}
 					else {
 						Err(tk[pos], orig, "value");
 					}
 				}
+				else
+					variable->nodes.push_back(new Node{ std::list<Node*>(), list, "DEFAULT", "", 0, 0 });
+				node->nodes.push_back(variable);
 			} 
 			while (Check(tk[pos], "GRAMMAR", ","));
 			
-			return 0;
+			return node;
 		}
 
 		Node* ParseStruct(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+			Node* node = new Node{ std::list<Node*>(), list, "STRUCT", "", 0, 0};
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseStruct\n\r";
 #endif 
 			++pos;
 			if (Check(tk[pos], "ID")) {
+				node->nodes.push_back(new Node{ std::list<Node*>(), node, "ID", tk[pos].value, 0, 0 });
 				pos++;
 			}
 			else {
 				Err(tk[pos], orig, "struct name");
 			}
+			Node* content = new Node{ std::list<Node*>(), node, "CONTENT", "", 0, 0};
 			if (Check(tk[pos], "BLOCK", "Pognali")) {
 				pos++;
 			}
@@ -631,31 +752,36 @@ namespace bndts {
 				if (Check(tk[pos], "ENDLINE"))
 					pos++;
 				else if (Check(tk[pos], "ID") || Check(tk[pos], "TYPE") || Check(tk[pos], "MOD"))
-					ParseVar(list, tk, pos, orig);
+					content->nodes.push_back(ParseVar(content, tk, pos, orig));
 				else if (Check(tk[pos], "BRACKETS", "(")) {
 					++pos;
-					ParseParams(list, tk, pos, orig);
+					Node* construct = new Node{ std::list<Node*>(), content, "CONSTRUCTOR", "", 0, 0};
+					construct->nodes.push_back(ParseParams(construct, tk, pos, orig));
 					if (Check(tk[pos], "BRACKETS", ")")) {
 						++pos;
 					}
 					else {
 						Err(tk[pos], orig, "closing bracket");
 					}
-					ParseBlock(list, tk, pos, orig);
+					construct->nodes.push_back(ParseBlock(construct, tk, pos, orig));
+					content->nodes.push_back(construct);
 				}
 				else 
 					Err(tk[pos], orig, "variable or constructor initialisation");
 			}
 			pos++;
-			return 0;
+			node->nodes.push_back(content);
+			return node;
 		}
 		
 		Node* ParseFunc(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+			Node* node = new Node{ std::list<Node*>(), list, "FUNCTION", "", 0, 0};
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseFunc\n\r";
 #endif 
 			++pos;
 			if (Check(tk[pos], "ID")) {
+				node->nodes.push_back(new Node{ std::list<Node*>(), node, "ID", tk[pos].value, 0, 0});
 				++pos;
 			}
 			else {
@@ -668,10 +794,11 @@ namespace bndts {
 				Err(tk[pos], orig, "opening bracket");
 			}
 			if (Check(tk[pos], "BRACKETS", ")")) {
+				node->nodes.push_back(new Node{ std::list<Node*>(), node, "PARAMS", "", 0, 0});
 				++pos;
 			}
 			else {
-				ParseParams(list, tk, pos, orig);
+				node->nodes.push_back(ParseParams(node, tk, pos, orig));
 				if (Check(tk[pos], "BRACKETS", ")")) {
 					++pos;
 				}
@@ -679,15 +806,15 @@ namespace bndts {
 					Err(tk[pos], orig, "closing bracket");
 				}
 			}
-			ParseBlock(list, tk, pos, orig);
-			return list;
+			node->nodes.push_back(ParseBlock(node, tk, pos, orig));
+			return node;
 		}
 
 		Node* Analyze(const std::vector<Token>& tk, const std::string& orig) {
 #ifdef SYNTDBG
 			std::cout << "CALLING Analyze\n\r";
 #endif 
-			Node* list = new Node();
+			Node* list = new Node{ std::list<Node*>(), 0, "PROGRAM", tk.front().filename, 0, 0};;
 			int pos = 0;
 			while (pos < tk.size() && !Check(tk[pos], "END")) {
 				const Token& tt = tk[pos];
