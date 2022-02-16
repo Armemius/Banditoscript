@@ -59,7 +59,7 @@ namespace bndts {
                 {"BRACKETS", R"(\(|\))"},
                 {"BLOCK", R"(\bPognali\b|\bShuher\b)"},
                 {"COMMENT", R"(\/\/.*|\/\*[\s\S]*?\*\/)"},
-                {"STRING", R"(\'(\\.|[^'\\])*\'|\"(\\.|[^"\\])*\")"},
+                {"STRING", R"(\"(\\.|[^"\\])*\")"},
                 {"KEYWORD", Join(keywords)},
                 {"MOD", Join(mods)},
                 {"TYPE", Join(systemTypes)},

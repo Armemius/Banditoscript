@@ -94,16 +94,16 @@ namespace bndts {
 			return token.id == id;
 		}
 
-		Node* ParseBlock(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig);
-		Node* ParseExpr(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig);
+		Node* ParseBlock(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig);
+		Node* ParseExpr(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig);
 
-		Node* ParseCall(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
-			Node* node = new Node{ std::list<Node*>(), list, "FUNCCALL", "", 0, 0 };
+		Node* ParseCall(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig) {
+			Node* node = new Node{ std::list<Node*>(), list, "CALL", "", 0, 0 };
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseCall\n\r";
 #endif 
 
-			if (Check(tk[pos], "ID")) {
+			if (Check(tk[pos], "ID") || Check(tk[pos], "CALL")) {
 				node->value = tk[pos].value;
 				pos++;
 			}
@@ -116,21 +116,26 @@ namespace bndts {
 			else {
 				Err(tk[pos], orig, "opening bracket");
 			}
-			pos--;
-			do {
-				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
-				pos++;
-			} while (Check(tk[pos], "GRAMMAR", ","));
 			if (Check(tk[pos], "BRACKETS", ")")) {
 				pos++;
 			}
 			else {
-				Err(tk[pos], orig, "closing bracket");
+				pos--;
+				do {
+					pos++;
+					node->nodes.push_back(ParseExpr(list, tk, pos, orig));
+				} while (Check(tk[pos], "GRAMMAR", ","));
+				if (Check(tk[pos], "BRACKETS", ")")) {
+					pos++;
+				}
+				else {
+					Err(tk[pos], orig, "closing bracket");
+				}
 			}
 			return node;
 		}
 
-		Node* ParseExpr(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+		Node* ParseExpr(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig) {
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseExpr\n\r";
 			//std::cout << tk[pos].orig << "\n\r";
@@ -138,6 +143,7 @@ namespace bndts {
 			int origp = pos;
 			static int brb = 0;
 			auto exprtkn = std::vector<Token>();
+			auto kostil = std::map<int, int>();
 			for (;;)
 			if (Check(tk[pos], "VALUE")) {
 				exprtkn.push_back(tk[pos]);
@@ -154,15 +160,13 @@ namespace bndts {
 				exprtkn.push_back(tk[pos]);
 				exprtkn.back().id = "VALUE";
 				pos++;
-			} else if (Check(tk[pos], "KEYWORD", "false")) {
-				exprtkn.push_back(tk[pos]);
-				exprtkn.back().id = "VALUE";
-				pos++;
 			} else if (Check(tk[pos], "OPERATION")) {
 				exprtkn.push_back(tk[pos]);
 				pos++;
 			}
 			else if (Check(tk[pos], "ID") && Check(tk[pos + 1], "BRACKETS", "(")) {
+				tk[pos].id = "CALL";
+				kostil[tk[pos].pos] = pos;
 				exprtkn.push_back(tk[pos]);
 				ParseCall(list, tk, pos, orig);
 			}
@@ -207,19 +211,19 @@ namespace bndts {
 
 
 					if (curr.value == "++" || curr.value == "--") {
-						if (prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID")
+						if (prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID" || prev.id == "CALL")
 							curr.value += "t";
-						else if (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID")
+						else if (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID" || next.id == "CALL")
 							curr.value += "r";
 						else
 							Err(curr, orig, "expression for increment or decrement");
 					}
-					else if ((prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "STRING" || prev.id == "ID" || prev.value == "++t" || prev.value == "--t")
-						&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "STRING" || next.id == "ID" || next.value == "-" || next.value == "--"
+					else if ((prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "STRING" || prev.id == "ID" ||  prev.id == "CALL" || prev.value == "++t" || prev.value == "--t")
+						&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "STRING" || next.id == "ID" || next.id == "CALL" || next.value == "-" || next.value == "--"
 							|| next.value == "++" || next.value == "*" || next.value == "&" || next.value == "!" || next.value == "~"))
 						curr.value += 'b';
-					else if (!(prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID" || prev.id == "STRING")
-							&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID" || next.id == "STRING"))
+					else if (!(prev.id == "BRACKETS" && prev.value == ")" || prev.id == "VALUE" || prev.id == "ID" || prev.id == "CALL" || prev.id == "STRING")
+							&& (next.id == "BRACKETS" && next.value == "(" || next.id == "VALUE" || next.id == "ID" || next.id == "CALL" || next.id == "STRING"))
 							curr.value += 'u';
 					else
 						Err(exprtkn[it], orig, "expressions for binary operation");
@@ -242,7 +246,7 @@ namespace bndts {
 				if (prev.value == "(" && it.value == ")")
 					Err(it, orig, "expression");
 				if (st == 0) {
-					if (it.id == "VALUE" || it.id == "ID" || it.id == "STRING")
+					if (it.id == "VALUE" || it.id == "ID" || it.id == "CALL" || it.id == "STRING")
 						st = 1;
 					else if (it.id == "BRACKETS" && it.value == "(")
 						st = 0;
@@ -257,7 +261,7 @@ namespace bndts {
 						st = 0;
 					if (it.id == "OPERATION" && it.value.back() == 'b')
 						st = 0;
-					else if (it.id == "VALUE" || it.id == "ID" || it.id == "STRING")
+					else if (it.id == "VALUE" || it.id == "ID" || it.id == "CALL" || it.id == "STRING")
 						Err(it, orig, "binary operation");
 				}
 				prev = it;
@@ -270,7 +274,7 @@ namespace bndts {
 					std::cout << tk.value << " ";
 				}
 				std::cout << "\n\r" << stk.size() << " " << res.size() << "\n\r";
-				if (tk.id == "VALUE" || tk.id == "STRING" || tk.id == "ID" || tk.id == "OPERATION" && tk.value.back() == 't') {
+				if (tk.id == "VALUE" || tk.id == "STRING" || tk.id == "ID" || tk.id == "CALL" || tk.id == "OPERATION" && tk.value.back() == 't') {
 					res.push_back(tk);
 				}
 				else if (tk.id == "OPERATION" && (tk.value.back() == 'r' || tk.value.back() == 'u')) {
@@ -317,10 +321,10 @@ namespace bndts {
 			std::cout << "\n";
 #endif
 			auto nodez = std::stack<Node*>();
-			for (auto& tk : res) {
-				Node* node = new Node{ std::list<Node*>(), list, tk.id, tk.value, 0, 0 };
-				if (tk.id == "OPERATION") {
-					if (tk.value.back() == 'b') {
+			for (auto& tks : res) {
+				Node* node = new Node{ std::list<Node*>(), list, tks.id, tks.value, 0, 0 };
+				if (tks.id == "OPERATION") {
+					if (tks.value.back() == 'b') {
 						auto n1 = nodez.top();
 						nodez.pop();
 						auto n2 = nodez.top();
@@ -330,19 +334,25 @@ namespace bndts {
 						nodez.push(node);
 					}
 					else {
-						auto n1 = nodez.top();
-						nodez.pop();
-						node->nodes.push_back(n1);
-						nodez.push(node);
+						
+							auto n1 = nodez.top();
+							nodez.pop();
+							node->nodes.push_back(n1);
+							nodez.push(node);
 					}
 				} else {
-					nodez.push(node);
+					if (tks.id == "CALL") {
+						int sus = kostil[tks.pos];
+						nodez.push(ParseCall(list, tk, sus, orig));
+					}
+					else
+						nodez.push(node);
 				}
 			}
 			return new Node{ std::list<Node*>{nodez.top()}, list, "EXPRESSION", "", 0, 0};
 		}
 
-		Node* ParseVar(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+		Node* ParseVar(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig) {
 			Node* node = new Node{ std::list<Node*>(), list, "VARIABLE", "", 0, 0 };
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseVar\n\r";
@@ -424,7 +434,7 @@ namespace bndts {
 			return 0;
 		}
 
-		Node* ParseStatement(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+		Node* ParseStatement(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig) {
 			Node* node = new Node{ std::list<Node*>(), list, "STATEMENT", "", 0, 0 };
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseStatement\n\r";
@@ -478,23 +488,35 @@ namespace bndts {
 			else if (Check(tk[pos], "KEYWORD", "return")) {
 				node->value = "RETURN";
 				pos++;
-				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 				if (Check(tk[pos], "ENDLINE")) {
+					node->nodes.push_back(new Node{ std::list<Node*>(), list, "VOID", "", 0, 0});
 					pos++;
 				}
 				else {
-					Err(tk[pos], orig, "end of line");
+					node->nodes.push_back(ParseExpr(list, tk, pos, orig));
+					if (Check(tk[pos], "ENDLINE")) {
+						pos++;
+					}
+					else {
+						Err(tk[pos], orig, "end of line");
+					}
 				}
 			}
 			else if (Check(tk[pos], "KEYWORD", "throw")) {
 				node->value = "THROW";
 				pos++;
-				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 				if (Check(tk[pos], "ENDLINE")) {
+					node->nodes.push_back(new Node{ std::list<Node*>(), list, "VOID", "", 0, 0});
 					pos++;
 				}
 				else {
-					Err(tk[pos], orig, "end of line");
+					node->nodes.push_back(ParseExpr(list, tk, pos, orig));
+					if (Check(tk[pos], "ENDLINE")) {
+						pos++;
+					}
+					else {
+						Err(tk[pos], orig, "end of line");
+					}
 				}
 			}
 			else if (Check(tk[pos], "KEYWORD", "in")) {
@@ -617,7 +639,7 @@ namespace bndts {
 			return node;
 		}
 
-		Node* ParseBlock(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+		Node* ParseBlock(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig) {
 			Node* node = new Node{ std::list<Node*>(), list, "BLOCK", "", 0, 0};
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseBlock\n\r";
@@ -643,7 +665,7 @@ namespace bndts {
 			return node;
 		}
 
-		Node* ParseParams(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+		Node* ParseParams(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig) {
 			Node* node = new Node{ std::list<Node*>(), list, "PARAMS", "", 0, 0};
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseParams\n\r";
@@ -728,7 +750,7 @@ namespace bndts {
 			return node;
 		}
 
-		Node* ParseStruct(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+		Node* ParseStruct(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig) {
 			Node* node = new Node{ std::list<Node*>(), list, "STRUCT", "", 0, 0};
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseStruct\n\r";
@@ -774,7 +796,7 @@ namespace bndts {
 			return node;
 		}
 		
-		Node* ParseFunc(Node* list, const std::vector<Token>& tk, int& pos, const std::string& orig) {
+		Node* ParseFunc(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig) {
 			Node* node = new Node{ std::list<Node*>(), list, "FUNCTION", "", 0, 0};
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseFunc\n\r";
@@ -810,7 +832,7 @@ namespace bndts {
 			return node;
 		}
 
-		Node* Analyze(const std::vector<Token>& tk, const std::string& orig) {
+		Node* Analyze(std::vector<Token>& tk, const std::string& orig) {
 #ifdef SYNTDBG
 			std::cout << "CALLING Analyze\n\r";
 #endif 
@@ -835,3 +857,4 @@ namespace bndts {
 		}
 	}
 }
+// Call
