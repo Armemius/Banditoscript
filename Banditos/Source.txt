@@ -1,14 +1,16 @@
+shifer aboba
+
 malina kicha Pognali
 	(posilniy shifer rbbr) Pognali
 		shifer sus, aboba
-		rbbr = 2 * -rbbr | hehehaha(2, 3, 4)
+		rbbr = 2 * -rbbr | hehehaha(2 * sus -> xd / xxx, 3, 4)
 	Shuher
 Shuher
 
 lapsha func() Pognali
 	shirokiy sus bruh
-	strela x == x zabit
-		laskat
+	strela zhigan zabit
+		laskat func()
 	inache
 		laskat 666
 Shuher

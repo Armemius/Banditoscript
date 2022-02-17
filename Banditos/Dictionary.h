@@ -5,32 +5,31 @@
 namespace bndts {
     namespace lex {
         auto keywords = std::vector<std::string>{
-            "\\blapsha\\b",		// func
+            "\\blapsha\\b",		    // func
             "\\bproehat\\b",		// for
             "\\bprognat\\b",		// for
-            "\\bdo\\b",			// for
-            "\\bpo\\b",			// for
+            "\\bdo\\b",			    // for
+            "\\bpo\\b",			    // for
             "\\bshag\\b",			// for
             "\\bpoka\\b",			// while
-            "\\byumat\\b",		// do
+            "\\byumat\\b",		    // do
             "\\bpoyasnit\\b",		// output
-            "\\bza\\b",			// output
-            "\\bi\\b",			// output
+            "\\bza\\b",		    	// output
+            "\\bi\\b",			    // output
             "\\balyo\\b",			// input
             "\\batas\\b",			// throw
             "\\bhare\\b",			// break
-            "\\bsachkovat\\b",	// continue
+            "\\bsachkovat\\b",	    // continue
             "\\blipa\\b",			// null
-            "\\bstrela\\b",		// if
-            "\\bzabit\\b",		// then
-            "\\binache\\b",		// else
-            "\\bzhigan\\b",		// true
-            "\\bfraer\\b",		// false
-            "\\bzabit\\b",		// then
-            "\\bhapnut\\b",		// new
-            "\\bvalnut\\b",		// delete
-            "\\blaskat\\b",		// return
-            "\\bmalina\\b"		// struct
+            "\\bstrela\\b",		    // if
+            "\\bzabit\\b",		    // then
+            "\\binache\\b",		    // else
+            "\\bzhigan\\b",		    // true
+            "\\bfraer\\b",		    // false
+            "\\bzabit\\b",		    // then
+            "\\bvalnut\\b",		    // delete
+            "\\blaskat\\b",		    // return
+            "\\bmalina\\b"		    // struct
         };
 
         auto mods = std::vector<std::string>{

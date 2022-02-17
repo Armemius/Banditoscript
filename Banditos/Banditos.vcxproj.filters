@@ -22,6 +22,9 @@
     <Filter Include="Файлы заголовков\Syntaxer">
       <UniqueIdentifier>{c656b996-ac59-407e-8c96-2fa63046ccf2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Файлы заголовков\Semanter">
+      <UniqueIdentifier>{3a272034-e2f9-484e-a632-0cffaf7e631b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Program.cpp">
@@ -55,6 +58,9 @@
     </ClInclude>
     <ClInclude Include="SyntacticTree.h">
       <Filter>Файлы заголовков\Syntaxer</Filter>
+    </ClInclude>
+    <ClInclude Include="Semanter.h">
+      <Filter>Файлы заголовков\Semanter</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

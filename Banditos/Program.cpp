@@ -4,6 +4,7 @@
 #include "FileTextProvider.h"
 #include "RawTextProvider.h"
 #include "SyntacticTree.h"
+#include "Semanter.h"
 
 using namespace bndts;
 
@@ -38,6 +39,7 @@ int main(int argc, char* argv[]) {
 		clear.push_back(Token{path, "END", "END", "END"});
 		auto SyntTree = synt::Analyze(clear, raw);
 		Print(SyntTree);
+		smc::Check(SyntTree);
 	}
 	catch (std::exception ex) {
 		std::cout << "Critical error! Unable to continue\n\r" << ex.what();
