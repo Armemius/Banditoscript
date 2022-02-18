@@ -38,6 +38,7 @@ int main(int argc, char* argv[]) {
 		}
 		clear.push_back(Token{path, "END", "END", "END"});
 		auto SyntTree = synt::Analyze(clear, raw);
+		smc::orig = raw;
 		Print(SyntTree);
 		smc::Check(SyntTree);
 	}

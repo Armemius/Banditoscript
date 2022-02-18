@@ -1,5 +1,3 @@
-shifer aboba
-
 malina kicha Pognali
 	(posilniy shifer rbbr) Pognali
 		shifer sus, aboba
@@ -14,6 +12,8 @@ lapsha func() Pognali
 	inache
 		laskat 666
 Shuher
+
+shifer aboba = 2 * biba(2.4 - 2)
 
 lapsha main(shirokoe pogonyalo params) Pognali
 	type name = sussy * --(2 * 3)-- * 2
