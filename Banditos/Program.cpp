@@ -41,6 +41,7 @@ int main(int argc, char* argv[]) {
 		smc::orig = raw;
 		Print(SyntTree);
 		smc::Check(SyntTree);
+		//Print(SyntTree);
 	}
 	catch (std::exception ex) {
 		std::cout << "Critical error! Unable to continue\n\r" << ex.what();

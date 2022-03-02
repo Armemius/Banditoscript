@@ -1,25 +1,30 @@
 malina kicha Pognali
-	(posilniy shifer rbbr) Pognali
+	(shifer rbbr) Pognali
 		shifer sus, aboba
 		rbbr = 2 * -rbbr | hehehaha(2 * sus -> xd / xxx, 3, 4)
 	Shuher
 Shuher
 
-lapsha func() Pognali
+kicha aboba = kicha(2) + 2
+
+lapsha func(shifer gay) Pognali
 	shirokiy sus bruh
 	strela zhigan zabit
-		laskat func()
+		laskat 2
 	inache
-		laskat 666
+		laskat func(func(func(2)))
 Shuher
 
-shifer aboba = 2 * biba(2.4 - 2)
+lapsha func() Pognali
+	shirokiy sus bruh
+	laskat func(2.4)
+Shuher
 
 lapsha main(shirokoe pogonyalo params) Pognali
 	type name = sussy * --(2 * 3)-- * 2
 	alyo name
 	strela "amogus" == "sus" zabit
-		rbbr *= rbbr
+		laskat zhigan
 	proehat it po tipomassiv Pognali
 		poyasnit za it i "222" + "222"
 		strela it == 666 zabit 

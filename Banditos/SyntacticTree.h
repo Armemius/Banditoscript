@@ -60,6 +60,22 @@ namespace bndts {
 			{")", {100, false}}
 		};
 
+		struct Type {
+			std::string value;
+			int mods;
+			int params;
+		};
+
+		bool operator==(const Type& op1, const Type& op2) {
+			return op1.value == op2.value
+					&& op1.mods == op2.mods
+					&& op1.params == op2.params;
+		}
+
+		bool operator!=(const Type& op1, const Type& op2) {
+			return !(op1 == op2);
+		}
+
 		struct Node {
 			std::vector<Node*> nodes;
 			Node* prev;
@@ -68,6 +84,7 @@ namespace bndts {
 			int mods = 0;
 			int params = 0;
 			Token tk;
+			Type type;
 		};
 
 		void Err(const Token& tt, const std::string& orig, std::string exp = "") {
@@ -139,7 +156,7 @@ namespace bndts {
 		Node* ParseExpr(Node* list, std::vector<Token>& tk, int& pos, const std::string& orig) {
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseExpr\n\r";
-			//std::cout << tk[pos].orig << "\n\r";
+			std::cout << tk[pos].orig << "\n\r";
 #endif 
 			int origp = pos;
 			static int brb = 0;
@@ -165,7 +182,7 @@ namespace bndts {
 				exprtkn.push_back(tk[pos]);
 				pos++;
 			}
-			else if (Check(tk[pos], "ID") && Check(tk[pos + 1], "BRACKETS", "(")) {
+			else if (Check(tk[pos], "ID") && Check(tk[pos + 1], "BRACKETS", "(") || Check(tk[pos], "CALL")) {
 				tk[pos].id = "CALL";
 				kostil[tk[pos].pos] = pos;
 				exprtkn.push_back(tk[pos]);
@@ -330,16 +347,17 @@ namespace bndts {
 						nodez.pop();
 						auto n2 = nodez.top();
 						nodez.pop();
-						node->nodes.push_back(n1);
+						n1->prev = node;
+						n2->prev = node;
 						node->nodes.push_back(n2);
+						node->nodes.push_back(n1);
 						nodez.push(node);
-					}
-					else {
-						
-							auto n1 = nodez.top();
-							nodez.pop();
-							node->nodes.push_back(n1);
-							nodez.push(node);
+					} else {
+						auto n1 = nodez.top();
+						nodez.pop();
+						n1->prev = node;
+						node->nodes.push_back(n1);
+						nodez.push(node);
 					}
 				} else {
 					if (tks.id == "CALL") {
@@ -398,22 +416,27 @@ namespace bndts {
 					pos++;
 				}
 			}
+			Type ttype;
+			ttype.params = node->params;
+			ttype.mods = node->mods;
 			std::string type;
 				if (Check(tk[pos], "TYPE") || Check(tk[pos], "ID")) {
 					type = tk[pos].value;
-					node->nodes.push_back(new Node{ std::vector<Node*>(), list, "TYPE", type, 0, 0, tk[pos] });
+					ttype.value = tk[pos].value;
+					node->nodes.push_back(new Node{ std::vector<Node*>(), list, "TYPE", type, 0, 0, tk[pos], ttype });
 					pos++;
 				}
 				else {
 					Err(tk[pos], orig, "type name");
 				}
+				node->type = ttype;
 				pos--;
 				do {
-					Node* var = new Node{ std::vector<Node*>(), list, "VARIABLE", "", 0, 0, tk[pos] };
+					Node* var = new Node{ std::vector<Node*>(), list, "VARIABLE", "", 0, 0, tk[pos], ttype };
 					var->params = node->params;
 					var->mods = node->mods;
 					pos++;
-					var->nodes.push_back(new Node{ std::vector<Node*>(), var, "TYPE", type, 0, 0, tk[pos] });
+					var->nodes.push_back(new Node{ std::vector<Node*>(), var, "TYPE", type, 0, 0, tk[pos], ttype });
 					if (Check(tk[pos], "ID")) {
 						var->value = tk[pos].value;
 						pos++;
@@ -426,7 +449,7 @@ namespace bndts {
 						var->nodes.push_back(ParseExpr(var, tk, pos, orig));
 					}
 					else
-						var->nodes.push_back(new Node{ std::vector<Node*>(), var, "DEFAULT", "", 0, 0, Token()});
+						var->nodes.push_back(new Node{ std::vector<Node*>(), var, "DEFAULT", "", 0, 0, Token(), Type()});
 					list->nodes.push_back(var);
 				} while (Check(tk[pos], "GRAMMAR", ","));
 				if (!Check(tk[pos], "ENDLINE")) {
@@ -439,6 +462,7 @@ namespace bndts {
 			Node* node = new Node{ std::vector<Node*>(), list, "STATEMENT", "", 0, 0, tk[pos] };
 #ifdef SYNTDBG
 			std::cout << "CALLING ParseStatement\n\r";
+			std::cout << tk[pos].orig << "\n\r";
 #endif 
 			while (Check(tk[pos], "ENDLINE")) {
 				pos++;
@@ -558,15 +582,23 @@ namespace bndts {
 			else if (Check(tk[pos], "KEYWORD", "if")) {
 			node->value = "IF";
 			pos++;
+			std::cout << "#1" << tk[pos].orig << "\n\r";
 			node->nodes.push_back(ParseExpr(list, tk, pos, orig));
+			std::cout << "#2" << tk[pos].orig << "\n\r";
 			if (Check(tk[pos], "KEYWORD", "then")) {
 				pos++;
 			}
 			else
 				Err(tk[pos], orig, "'then' keyword");
+			std::cout << "#3" << tk[pos].orig << "\n\r";
 			node->nodes.push_back(ParseBlock(list, tk, pos, orig));
-			if (Check(tk[pos], "KEYWORD", "else")) {
+			std::cout << "#4" << tk[pos].orig << "\n\r";
+			while (Check(tk[pos], "ENDLINE"))
 				pos++;
+			if (Check(tk[pos], "KEYWORD", "else")) {
+				std::cout << "#5" << tk[pos].orig << "\n\r";
+				pos++;
+				std::cout << "#6" << tk[pos].orig << "\n\r";
 				node->nodes.push_back(ParseBlock(list, tk, pos, orig));
 			}
 			}
@@ -674,6 +706,7 @@ namespace bndts {
 			pos--;
 			do {
 				Node* variable = new Node{ std::vector<Node*>(), node, "VARIABLE", "", 0, 0, Token()};
+				Type type = Type();
 				pos++;
 				if (Check(tk[pos], "MOD")) {
 					if (Check(tk[pos], "MOD", "dim")) {
@@ -715,9 +748,12 @@ namespace bndts {
 						pos++;
 					}
 				}
+				type.mods = variable->mods;
+				type.params = variable->params;
 				if (Check(tk[pos], "TYPE") || Check(tk[pos], "ID")) {
 					node->tk = tk[pos];
-					variable->nodes.push_back(new Node{ std::vector<Node*>(), list, "TYPE", tk[pos].value, 0, 0, tk[pos] });
+					type.value = tk[pos].value;
+					variable->nodes.push_back(new Node{ std::vector<Node*>(), list, "TYPE", tk[pos].value, 0, 0, tk[pos], type });
 					pos++;
 				}
 				else {
