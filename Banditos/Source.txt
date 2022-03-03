@@ -1,8 +1,8 @@
 malina kicha Pognali
 	(shifer rbbr) Pognali
-		shifer sus, aboba
-		rbbr = 2 * -rbbr | hehehaha(2 * sus -> xd / xxx, 3, 4)
+		rbbr = 2
 	Shuher
+	shifer rbbr
 Shuher
 
 kicha aboba = kicha(2) + 2

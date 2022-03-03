@@ -36,8 +36,15 @@ namespace bndts {
             "bool"
         };
 
+        std::set<std::string> bitwiseTypes{
+            "int",
+            "long",
+            "float",
+            "double",
+        };
+
         struct Var {
-            synt::Type type;
+            synt::Type type = Type();
             int lvl = 0;
             std::string id = "None";
         };
@@ -61,6 +68,7 @@ namespace bndts {
         std::unordered_map<std::string, std::vector<Func>> funcs;
         std::unordered_map<std::string, std::stack<Var>> vars;
 
+        Var CheckVar(synt::Node* node, int lvl);
         Type CheckExpr(synt::Node* node, synt::Node* prev, int lvl, std::set<std::string>& usedFuncs);
 
         Type GetOpType(const Type& op1, const Type& op2, const std::string& oper, Node* node) {
@@ -98,8 +106,12 @@ namespace bndts {
 
         void ReloadVars(int lvl) {
             for (auto& it : vars) {
+                if (it.second.size() == 0)
+                    continue;
                 while (it.second.top().lvl > lvl) {
                     it.second.pop();
+                    if (it.second.empty())
+                        break;
                 }
             }
         }
@@ -130,6 +142,38 @@ namespace bndts {
                     CheckFuncType(it, lvl, type, isFirst, name);
             }
             return Type();
+        }
+
+        void ParseStatement(synt::Node* node, int lvl, bool noReturn = false, bool isLoop = false) {
+            std::cout << "ABIBUS!!!\n\r";
+            if (node->value == "VAR") {
+                CheckVar(node->nodes[0], lvl);
+            } else if (node->value == "EXPR") {
+                auto used = std::set<std::string>();
+                CheckExpr(node->nodes[0], node, lvl, used);
+            }
+        }
+
+        void CheckConstr(synt::Node* node, int lvl) {
+            for (auto& it : node->nodes[0]->nodes) {
+                if (!vars[it->value].empty())
+                    if (vars[it->value].top().lvl == lvl)
+                        Err(it->tk, "variable redefinition"); // Redefinition of var
+                std::cout << "SUSABIBAS " << (!vars[it->value].empty() ? vars[it->value].top().lvl : -1) << " " << lvl << "\n\r";
+                Var var = Var();
+                var.id = it->value;
+                var.type = it->nodes[0]->type;
+                var.lvl = lvl;
+                auto tmp = std::set<std::string>();
+                if (it->nodes[1]->token != "DEFAULT")
+                    Err(node->tk, "default values is not supported yet"); // Sussy
+                std::cout << "BIBASUSUS " << it->value << " " << vars[it->value].size() << "\n\r";
+                vars[it->value].push(var);
+            }
+
+            for (auto& it : node->nodes[1]->nodes) {
+                ParseStatement(it, lvl, true, false);
+            }
         }
 
         void CheckFuncBlock(synt::Node* node, int lvl) {
@@ -230,6 +274,7 @@ namespace bndts {
             Var var = Var();
             var.id = node->value;
             var.type = node->nodes[0]->type;
+            var.lvl = lvl;
             auto tmp = std::set<std::string>();
             if (node->nodes[1]->token != "DEFAULT" && var.type != CheckExpr(node->nodes[1], node, lvl, tmp))
                 Err(node->tk, "type mismatch"); // Type mismatch
@@ -294,6 +339,9 @@ namespace bndts {
                     skipper:
                         continue;
                     }
+
+                    CheckConstr(it, lvl + 1);
+                    ReloadVars(lvl);
 
                     str.constructs.push_back(Func{ name, name + "@" + std::to_string(str.constructs.size()), params, block, name });
                 }
