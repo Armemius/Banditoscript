@@ -26,6 +26,43 @@ namespace bndts {
             throw std::exception(err.c_str());
         }
 
+        auto renames = std::stack<std::pair<std::string&, std::string>>();
+
+        std::set<std::string> compOps{
+            "==b",
+            ">=b",
+            "<=b",
+            "<b",
+            ">b",
+            "!=b",
+        };
+
+        std::set<std::string> btwOps{
+            "&b",
+            "|b",
+            "<<b",
+            ">>b",
+        };
+
+        std::set<std::string> boolOps{
+            "&&b",
+            "||b",
+        };
+
+        std::set<std::string> setOps{
+            "=b",
+            "+=b",
+            "-=b",
+            "/=b",
+            "*=b",
+            "%=b",
+            "~=b",
+            "<<=b",
+            ">>=b",
+            "&=b",
+            "|=b",
+        };
+
         std::set<std::string> defaultTypes {
             "string",
             "int",
@@ -72,6 +109,21 @@ namespace bndts {
         Type CheckExpr(synt::Node* node, synt::Node* prev, int lvl, std::set<std::string>& usedFuncs);
 
         Type GetOpType(const Type& op1, const Type& op2, const std::string& oper, Node* node) {
+            if (op1 == op2 && setOps.find(oper) != setOps.end()) {
+                if (op1.mods & CONST_MODIFIER)
+                    Err(node->tk, "trying to change const value");
+                return op1;
+            }
+            if (op1 == op2 && btwOps.find(oper) != btwOps.end()) {
+                return op1;
+            }
+            if (boolOps.find(oper) != boolOps.end()) {
+                if ((op1.mods & ARR_MODIFIER) != 0 || (op1.mods & PTR_MODIFIER) != 0)
+                    Err(node->tk, "invalid modifiers");
+                if (op1.value != "bool")
+                    Err(node->tk, "variables are not boolean");
+                return op1;
+            }
             if (oper == "->b") {
                 std::cout << "SUS!!\n";
                 if (op1.mods & ARR_MODIFIER) {
@@ -94,10 +146,15 @@ namespace bndts {
                 else 
                     Err(node->tk, "incorrect use of '->' operator");
             }
-            if (op1 == op2 && !(op1.mods & (ARR_MODIFIER | PTR_MODIFIER)) && defaultTypes.find(op1.value) != defaultTypes.end()) {
+            if (op1 == op2 && compOps.find(oper) != compOps.end()) {
+                return Type{"bool", 0, 0};
+            }
+            if (op1 == op2 && !(op1.mods & (ARR_MODIFIER | PTR_MODIFIER)) 
+                && defaultTypes.find(op1.value) != defaultTypes.end()
+                && btwOps.find(oper) == btwOps.end()) {
                 return op1;
             }
-            Err(node->tk, "not able to use operation for these types(" 
+            Err(node->tk, "not able to use operation '" + oper + "' for these types(" 
                 + op1.value + ":" + std::to_string(op1.mods) 
                 + ":" + std::to_string(op1.params) + "/" 
                 + op2.value + ":" + std::to_string(op2.mods)
@@ -144,13 +201,137 @@ namespace bndts {
             return Type();
         }
 
-        void ParseStatement(synt::Node* node, int lvl, bool noReturn = false, bool isLoop = false) {
+        void ParseStatement(synt::Node* node, int lvl, bool noReturn = false, bool isLoop = false, Type* tp = 0) {
             std::cout << "ABIBUS!!!\n\r";
+            auto tmp = std::set<std::string>();
             if (node->value == "VAR") {
                 CheckVar(node->nodes[0], lvl);
             } else if (node->value == "EXPR") {
                 auto used = std::set<std::string>();
                 CheckExpr(node->nodes[0], node, lvl, used);
+            } else if (node->value == "CONTINUE") {
+                if (!isLoop)
+                    Err(node->tk, "continue is within loop");
+            } else if (node->value == "BREAK") {
+                if (!isLoop)
+                    Err(node->tk, "break is within loop");
+            } else if (node->value == "DELETE") {
+                auto& id = node->nodes[0]->value;
+                if (vars[id].empty())
+                    Err(node->tk, "no variable matching this name");
+                if ((vars[id].top().type.mods & PTR_MODIFIER) == 0)
+                    Err(node->tk, "variable is not ptr");
+            } else if (node->value == "RETURN") {
+                if (noReturn)
+                    Err(node->tk, "return is not allowed here");
+                if (tp == 0 && node->nodes[0]->token == "VOID")
+                    return;
+                else {
+                    auto type = CheckExpr(node->nodes[0], node, lvl, tmp);
+                    if (type != *tp)
+                        Err(node->tk, "return type mismatch");
+                }
+            } else if (node->value == "THROW") {
+                if (node->nodes[0]->token == "VOID")
+                    return;
+                auto type = CheckExpr(node->nodes[0], node, lvl, tmp);
+                if (type.mods != 0 || type.params != 0 || type.value != "string")
+                    Err(node->tk, "throw message is not string");
+            } else if (node->value == "INPUT") {
+                if (vars[node->nodes[0]->value].empty())
+                    Err(node->tk, "no variable matching this name");
+            } else if (node->value == "OUTPUT") {
+                for (auto& it : node->nodes) {
+                    auto type = CheckExpr(it, node, lvl, tmp);
+                    if (type.mods != 0 || type.params != 0 || defaultTypes.find(type.value) == defaultTypes.end())
+                        Err(it->tk, "output element's type is not default");
+                }
+            } else if (node->value == "IF") {
+                auto type = CheckExpr(node->nodes[0], node, lvl, tmp);
+                if (type.mods != 0 || type.params != 0 || type.value != "bool")
+                    Err(node->tk, "expression result is not boolean");
+                for (auto& it : node->nodes[1]->nodes) {
+                    ParseStatement(it, lvl + 1, noReturn, isLoop, tp);
+                }
+                ReloadVars(lvl);
+                if (node->nodes.size() > 2) {
+                    for (auto& it : node->nodes[2]->nodes) {
+                        ParseStatement(it, lvl + 1, noReturn, isLoop, tp);
+                    }
+                    ReloadVars(lvl);
+                }
+            } else if (node->value == "WHILE") {
+                auto type = CheckExpr(node->nodes[0], node, lvl, tmp);
+                if (type.mods != 0 || type.params != 0 || type.value != "bool")
+                    Err(node->tk, "expression result is not boolean");
+                for (auto& it : node->nodes[1]->nodes) {
+                    ParseStatement(it, lvl + 1, noReturn, true, tp);
+                }
+                ReloadVars(lvl);
+            } else if (node->value == "DOWHILE") {
+                auto type = CheckExpr(node->nodes[0], node, lvl, tmp);
+                if (type.mods != 0 || type.params != 0 || type.value != "bool")
+                    Err(node->tk, "expression result is not boolean");
+                for (auto& it : node->nodes[1]->nodes) {
+                    ParseStatement(it, lvl + 1, noReturn, true, tp);
+                }
+                ReloadVars(lvl);
+            } else if (node->value == "FOR") {
+                auto& id = node->nodes[0]->value;
+                if (vars[id].empty())
+                    Err(node->tk, "no variable matching this name");
+                auto& type0 = vars[id].top().type;
+                if (type0.mods != 0 || type0.params != 0 || bitwiseTypes.find(type0.value) == bitwiseTypes.end())
+                    Err(node->tk, "variable type is not allowed");
+                auto type1 = CheckExpr(node->nodes[1], node, lvl, tmp);
+                if (type1.mods != 0 || type1.params != 0 || bitwiseTypes.find(type1.value) == bitwiseTypes.end())
+                    Err(node->tk, "destination type is not allowed");
+                if (type0 != type1)
+                    Err(node->tk, "initial and destination type mismatch");
+                if (node->nodes.size() == 4) {
+                    auto type2 = CheckExpr(node->nodes[2], node, lvl, tmp);
+                    if (type1 != type2) {
+                        Err(node->tk, "destination and step type mismatch");
+                    } 
+                    for (auto& it : node->nodes[3]->nodes) {
+                        ParseStatement(it, lvl + 1, noReturn, true, tp);
+                    }
+                    ReloadVars(lvl);
+                }
+                else {
+                    for (auto& it : node->nodes[2]->nodes) {
+                        ParseStatement(it, lvl + 1, noReturn, true, tp);
+                    }
+                    ReloadVars(lvl);
+                }
+            } else if (node->value == "FOREACH") {
+                auto& id = node->nodes[0]->value;
+                if (vars[id].empty())
+                    Err(node->tk, "no variable matching this name");
+                auto& type0 = vars[id].top().type;
+                if ((type0.mods & (CONST_MODIFIER)) != 0)
+                    Err(node->tk, "invalid variable modifiers");
+                auto type1 = CheckExpr(node->nodes[1], node, lvl, tmp);
+                if ((type1.mods & ARR_MODIFIER) == 0)
+                    Err(node->tk, "variable is not array");
+                if (type0.value != type1.value)
+                    Err(node->tk, "can't match types");
+                Type dtp = (type1.params == 0 ? Type{ type1.value, type1.mods & ~ARR_MODIFIER, type1.params } : Type{ type1.value, type1.mods, type1.params - 1});
+                std::cout << (type1.params - type0.params != 1) << " " << (type1.params == 0 && (type0.mods & ARR_MODIFIER) == 0) << "\n\r";
+                std::cout << type0.value << " " << type1.value << "\n\r";
+                std::cout << type0.mods << " " << type1.mods << "\n\r";
+                std::cout << type0.params << " " << type1.params << "\n\r";
+                bool sc1 = type1.params - type0.params == 1;
+                bool sc2 = type1.params == 0 && (type0.mods & ARR_MODIFIER) == 0;
+                if (type0 != dtp)
+                    Err(node->tk, "not able to match variables");
+                for (auto& it : node->nodes[2]->nodes) {
+                    ParseStatement(it, lvl + 1, noReturn, true, tp);
+                }
+                ReloadVars(lvl);
+            }       
+            else {
+                throw std::exception("Nepon vtf");
             }
         }
 
@@ -176,10 +357,6 @@ namespace bndts {
             }
         }
 
-        void CheckFuncBlock(synt::Node* node, int lvl) {
-            
-        }
-
         Type CheckCall(synt::Node* node, int lvl, std::set<std::string> &used) {
             std::string& name = node->value;
             for (auto& it : funcs[name]) {
@@ -188,7 +365,7 @@ namespace bndts {
                         if (CheckExpr(node->nodes[j], node, lvl, used) != it.params->nodes[j]->nodes[0]->type)
                             goto continuer;
                     }
-                    name = it.trueName;
+                    renames.push({name, it.trueName});
                     return it.type;
                 }
             continuer:
@@ -256,9 +433,44 @@ namespace bndts {
             else if (node->token == "OPERATION") {
                 // Unary
                 if (node->nodes.size() == 1) {
-                    return CheckExpr(node->nodes[0], node, lvl, used);
+                    auto type = CheckExpr(node->nodes[0], node, lvl, used);
+                    auto& oper = node->value;
+                    if (oper == "&u") {
+                        if (node->nodes[0]->token != "ID")
+                            Err(node->tk, "operation only works with variables");
+                        if ((type.mods & PTR_MODIFIER) == 0)
+                            return Type{ type.value, type.mods | PTR_MODIFIER, type.params };
+                        else
+                            Err(node->tk, "operation only works with non-ptr variables");
+                    } else if (oper == "*u") {
+                        if (node->nodes[0]->token != "ID")
+                            Err(node->tk, "operation only works with variables");
+                        if ((type.mods & PTR_MODIFIER) != 0)
+                            return Type{ type.value, type.mods & ~PTR_MODIFIER, type.params };
+                        else
+                            Err(node->tk, "operation only works with ptr variables");
+                    }
+                    else if (oper.back() != 'u') {
+                        if (node->nodes[0]->token != "ID")
+                            Err(node->tk, "this oneration only works with variables");
+                        if (type.mods & CONST_MODIFIER)
+                            Err(node->tk, "this oneration doesn't works with constants");
+                        if (type.mods & PTR_MODIFIER)
+                            Err(node->tk, "this oneration doesn't works with pointers");
+                        if (type.mods & ARR_MODIFIER)
+                            Err(node->tk, "this oneration doesn't works with arrays");
+                        if (bitwiseTypes.find(type.value) == bitwiseTypes.end())
+                            Err(node->tk, "this oneration doesn't works with this type");
+                    }
+                    else if (bitwiseTypes.find(type.value) == bitwiseTypes.end()) {
+                        //std::cout << type.value << "\n\r";
+                        Err(node->tk, "this oneration doesn't work with this type");
+                    }
+                    return type;
                 // Binary
                 } else {
+                    if (node->value == "=b" && node->nodes[0]->token != "ID")
+                        Err(node->tk, "trying to change expression"); // Undefined function
                     Type type1 = CheckExpr(node->nodes[0], node, lvl, used),
                          type2 = CheckExpr(node->nodes[1], node, lvl, used);
                     return GetOpType(type1, type2, node->value, node);
@@ -276,6 +488,8 @@ namespace bndts {
             var.type = node->nodes[0]->type;
             var.lvl = lvl;
             auto tmp = std::set<std::string>();
+            if (defaultTypes.find(var.type.value) == defaultTypes.end() && structs.find(var.type.value) == structs.end())
+                Err(node->tk, "undefined type"); // Type mismatch
             if (node->nodes[1]->token != "DEFAULT" && var.type != CheckExpr(node->nodes[1], node, lvl, tmp))
                 Err(node->tk, "type mismatch"); // Type mismatch
             vars[node->value].push(var);
@@ -303,7 +517,9 @@ namespace bndts {
             funcs[name].push_back(Func{name, name + "@" + std::to_string(funcs[name].size()), params, block, type});
             CheckFuncType(block, lvl, funcs[name].back().type, tmp, name);
             std::cout << funcs[name].back().type.value << " " << funcs[name].back().trueName << "\n";
-            CheckFuncBlock(block, lvl);
+            for (auto& it : block->nodes) {
+                ParseStatement(it, lvl, false, false, &funcs[name].back().type);
+            }
         }
 
         void CheckStruct(synt::Node* node, int lvl) {
@@ -340,10 +556,11 @@ namespace bndts {
                         continue;
                     }
 
+                    str.constructs.push_back(Func{ name, name + "@" + std::to_string(str.constructs.size()), params, block, name });
                     CheckConstr(it, lvl + 1);
                     ReloadVars(lvl);
 
-                    str.constructs.push_back(Func{ name, name + "@" + std::to_string(str.constructs.size()), params, block, name });
+                    
                 }
             }
             if (structs[str.name].name == "@NONE")
@@ -374,6 +591,11 @@ namespace bndts {
                     else
                         throw; //SUSS
                 }
+            }
+            while (!renames.empty()) {
+                auto& tmp = renames.top();
+                tmp.first = tmp.second;
+                renames.pop();
             }
             return;
         }

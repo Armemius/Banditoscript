@@ -64,6 +64,7 @@ namespace bndts {
 			std::string value;
 			int mods;
 			int params;
+			bool isMutable = true;
 		};
 
 		bool operator==(const Type& op1, const Type& op2) {
@@ -498,6 +499,7 @@ namespace bndts {
 					node->value = "DELETE";
 					pos++;
 					if (Check(tk[pos], "ID")) {
+						node->nodes.push_back(new Node{ std::vector<Node*>(), list, "ID", tk[pos].value, 0, 0, tk[pos]});
 						pos++;
 					}
 					else {
@@ -514,7 +516,7 @@ namespace bndts {
 				node->value = "RETURN";
 				pos++;
 				if (Check(tk[pos], "ENDLINE")) {
-					node->nodes.push_back(new Node{ std::vector<Node*>(), list, "VOID", "", 0, 0, tk[pos] });
+					node->nodes.push_back(new Node{ std::vector<Node*>(), list, "VOID", "VOID", 0, 0, tk[pos] });
 					pos++;
 				}
 				else {
@@ -638,6 +640,7 @@ namespace bndts {
 			}
 			else
 				Err(tk[pos], orig, "'to' keyword");
+			std::cout << "SNUSUS!" << tk[pos].value << "\n\r";
 			node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 			if (Check(tk[pos], "KEYWORD", "step")) {
 				pos++;
@@ -654,11 +657,11 @@ namespace bndts {
 				}
 				else
 					Err(tk[pos], orig, "name");
-				if (Check(tk[pos], "KEYWORD", "step")) {
+				if (Check(tk[pos], "KEYWORD", "stepel")) {
 					pos++;
 				}
 				else
-					Err(tk[pos], orig, "'step' keyword");
+					Err(tk[pos], orig, "'po' keyword");
 				node->nodes.push_back(ParseExpr(list, tk, pos, orig));
 				node->nodes.push_back(ParseBlock(list, tk, pos, orig));
 			}
@@ -816,7 +819,12 @@ namespace bndts {
 				else if (Check(tk[pos], "BRACKETS", "(")) {
 					++pos;
 					Node* construct = new Node{ std::vector<Node*>(), content, "CONSTRUCTOR", "", 0, 0, tk[pos] };
-					construct->nodes.push_back(ParseParams(construct, tk, pos, orig));
+					if (Check(tk[pos], "BRACKETS", ")")) {
+						construct->nodes.push_back(new Node{ std::vector<Node*>(), list, "PARAMS", "", 0, 0, tk[pos] });
+					}
+					else {
+						construct->nodes.push_back(ParseParams(construct, tk, pos, orig));
+					}
 					if (Check(tk[pos], "BRACKETS", ")")) {
 						++pos;
 					}
