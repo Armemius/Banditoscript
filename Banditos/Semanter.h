@@ -108,7 +108,7 @@ namespace bndts {
         Var CheckVar(synt::Node* node, int lvl);
         Type CheckExpr(synt::Node* node, synt::Node* prev, int lvl, std::set<std::string>& usedFuncs);
 
-        Type GetOpType(const Type& op1, const Type& op2, const std::string& oper, Node* node) {
+        Type GetOpType(const Type& op1, const Type& op2, const std::string& oper, Node* node, std::string sus) {
             if (op1 == op2 && setOps.find(oper) != setOps.end()) {
                 if (op1.mods & CONST_MODIFIER)
                     Err(node->tk, "trying to change const value");
@@ -138,11 +138,20 @@ namespace bndts {
                     else 
                         Err(node->tk, "index is not INT");
                 }
-                else
-                    if (defaultTypes.find(op1.value) != defaultTypes.end()) {
+                else if (defaultTypes.find(op1.value) != defaultTypes.end()) {
                         std::cout << "STRUCTER!!\n";
                         std::cout << op2.value << "\n";
+                }
+                else if (defaultTypes.find(op1.value) == defaultTypes.end()) {
+                    std::cout << "STRUCTER SUSA!!\n";
+                    std::cout << op1.value << " " << sus << "\n";
+                    for (auto it : structs[op1.value].vars) {
+                        std::cout << it.second.id << "\n";
                     }
+                    if (structs[op1.value].vars.find(sus) == structs[op1.value].vars.end())
+                        Err(node->tk, "struct doesn't contain such member");
+                    return structs[op1.value].vars[sus].type;
+                }
                 else 
                     Err(node->tk, "incorrect use of '->' operator");
             }
@@ -473,7 +482,7 @@ namespace bndts {
                         Err(node->tk, "trying to change expression"); // Undefined function
                     Type type1 = CheckExpr(node->nodes[0], node, lvl, used),
                          type2 = CheckExpr(node->nodes[1], node, lvl, used);
-                    return GetOpType(type1, type2, node->value, node);
+                    return GetOpType(type1, type2, node->value, node, node->nodes[1]->value);
                 }
             }
             return Type{"void"};
@@ -495,7 +504,7 @@ namespace bndts {
             vars[node->value].push(var);
             return var;
         }
-
+        
         void CheckFunc(synt::Node* node, int lvl) {
             std::string name = node->nodes[0]->value;
             Node* params = node->nodes[1];
@@ -511,29 +520,37 @@ namespace bndts {
             skipper:
                 continue;
             }
-
+            for (auto& it : params->nodes) {
+                if (!vars[it->value].empty())
+                if (vars[it->value].top().lvl >= lvl)
+                    Err(node->tk, "variable redefinition#");
+                vars[it->value].push(Var{it->nodes[0]->type, lvl + 1, it->value});
+            }
             Type type = Type{"void"};
             bool tmp = true;
             funcs[name].push_back(Func{name, name + "@" + std::to_string(funcs[name].size()), params, block, type});
-            CheckFuncType(block, lvl, funcs[name].back().type, tmp, name);
+            CheckFuncType(block, lvl + 1, funcs[name].back().type, tmp, name);
             std::cout << funcs[name].back().type.value << " " << funcs[name].back().trueName << "\n";
             for (auto& it : block->nodes) {
-                ParseStatement(it, lvl, false, false, &funcs[name].back().type);
+                ParseStatement(it, lvl + 1, false, false, &funcs[name].back().type);
             }
+            ReloadVars(lvl);
         }
 
         void CheckStruct(synt::Node* node, int lvl) {
             Struct str = Struct();
             str.name = node->nodes[0]->value;
-            auto& stg = structs[str.name];
             for (auto& it : node->nodes[1]->nodes) {
                 if (it == NULL)
                     continue;
                 std::cout << it->token << "\n\r";
                 if (it->token == "VARIABLE") {
                     auto var = CheckVar(it, lvl);
-                    if (stg.vars.find(var.id) == stg.vars.end()) {
-                        stg.vars.insert({ var.id, var });
+                    if (str.vars.find(var.id) == str.vars.end()) {
+                        str.vars.insert({ var.id, var });
+                        std::cout << "RBBB " << str.vars.size() << "\n";
+                        for (auto& it : str.vars)
+                            std::cout << "BBRB! " << it.second.id << "\n\r";
                     } else
                         Err(it->tk, "struct variable redefinition");
                 } else if (it->token == "CONSTRUCTOR") {
@@ -563,6 +580,9 @@ namespace bndts {
                     
                 }
             }
+            std::cout << "RBBB " << str.vars.size() << "\n";
+            for (auto& it : str.vars)
+                std::cout << "BBRB! " << it.second.id << "\n\r";
             if (structs[str.name].name == "@NONE")
                 structs[str.name] = str;
             else

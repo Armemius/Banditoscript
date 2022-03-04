@@ -41,11 +41,11 @@ namespace bndts {
         };
         auto systemTypes = std::vector<std::string>{
             "\\bpogonyalo\\b",		// string
-            "\\bshifer\\b",		// int
+            "\\bshifer\\b",		    // int
             "\\bcolonna\\b",		// long
             "\\bplavnik\\b",		// float
             "\\bdvoynik\\b",		// double
-            "\\bgudron\\b",		// char
+            "\\bgudron\\b",		    // char
             "\\bchubrik\\b",		// bool
         };
         auto operations = std::vector<std::string> {
